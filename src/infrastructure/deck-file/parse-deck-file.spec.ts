@@ -32,6 +32,8 @@ function issuesOf(content: unknown): readonly string[] {
   throw new Error('parseDeckFile aurait dû rejeter ce contenu');
 }
 
+const pathsOf = (issues: readonly string[]): string[] => issues.map((issue) => issue.split(' : ')[0] ?? '');
+
 describe('parseDeckFile', () => {
   it('convertit un deck valide en Deck du domaine', () => {
     const deck = parseDeckFile(aRawDeck(), 'react.json');
@@ -40,30 +42,38 @@ describe('parseDeckFile', () => {
     expect(deck.cards[0]).toMatchObject({ id: 'react.useEffect.cleanup', kind: 'recall', difficulty: 1 });
   });
 
-  it('signale tous les champs invalides en une fois, avec leur chemin', () => {
-    const issues = issuesOf(aRawDeck([aRawCard({ question: ' ', kind: 'qcm', difficulty: 4, keyPoints: [] })]));
+  it('signale tous les champs invalides d’une carte en une fois, avec leur chemin', () => {
+    const issues = issuesOf(aRawDeck([aRawCard({ question: ' ', difficulty: 4, keyPoints: [] })]));
 
-    expect(issues).toHaveLength(4);
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        'deck.cards[0].question : texte non vide attendu',
-        'deck.cards[0].kind : une valeur parmi "recall", "code", "compare" attendue',
-        'deck.cards[0].difficulty : une valeur parmi 1, 2, 3 attendue',
-        'deck.cards[0].keyPoints : liste non vide de textes non vides attendue',
-      ]),
+    expect(pathsOf(issues)).toEqual(
+      expect.arrayContaining(['cards[0].question', 'cards[0].keyPoints', 'cards[0].difficulty']),
     );
+    expect(issues).toHaveLength(3);
+  });
+
+  it('refuse une clé inconnue, pour qu’une faute de frappe ne fasse pas disparaître un champ', () => {
+    const issues = issuesOf(aRawDeck([aRawCard({ pitfals: ['piège'] })]));
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain('pitfals');
+  });
+
+  it('refuse un type de carte inconnu', () => {
+    const issues = issuesOf(aRawDeck([aRawCard({ kind: 'qcm' })]));
+
+    expect(pathsOf(issues)).toEqual(['cards[0].kind']);
   });
 
   it('refuse une source qui n’est pas une URL https', () => {
     const issues = issuesOf(aRawDeck([aRawCard({ source: { title: 'useEffect', url: 'http://react.dev' } })]));
 
-    expect(issues).toEqual(['deck.cards[0].source.url : URL https attendue']);
+    expect(pathsOf(issues)).toEqual(['cards[0].source.url']);
   });
 
   it('exige un extrait de code pour une carte "code"', () => {
     const issues = issuesOf(aRawDeck([aRawCard({ kind: 'code' })]));
 
-    expect(issues).toEqual(['deck.cards[0].code : extrait de code requis pour une carte "code"']);
+    expect(pathsOf(issues)).toEqual(['cards[0].code']);
   });
 
   it('signale les incohérences du deck une fois la forme valide', () => {
