@@ -27,7 +27,10 @@ Le contenu est séparé du moteur. Ajouter une techno = ajouter un fichier de de
 - **Index des decks** : `public/decks/index.json` liste les fichiers de deck. L'UI le lit pour savoir quels decks charger : rien n'est codé en dur.
 - **Decks** : un fichier JSON par techno (`public/decks/react.json`, `public/decks/tanstack-query.json`…), copié tel quel dans le build et publié avec la page. Un test fait passer chaque deck listé dans le même parseur que l'appli.
 - **Moteur de répétition espacée** : FSRS via la librairie `ts-fsrs` (dépendance npm bundlée par Vite, à installer au MVP) ; à défaut, un SM-2 simplifié maison. Il ne sait rien de React.
-- **Progression** : par carte, stockée dans `db` (échéance, stabilité, difficulté FSRS, révisions, oublis), clé = `id` de la carte.
+- **Progression** : par carte, stockée dans `db` (échéance, stabilité, difficulté FSRS, révisions, oublis), clé = `id` de la carte. Chemin : `data/users/<id>/progress/cards/<cardId>` (privé par utilisateur ; `data/users/me/...` avec ArtifactData). L'état FSRS est opaque pour le domaine (`schedulerState`).
+- **Signalements** : collection partagée `reports` (`cardId`, `reason` wrong | unclear | other, `comment`, `reportedAt`), lue par Claude pour corriger les cartes.
+- **Sans base** (dev local, déconnecté) : mêmes données dans le localStorage, l'écran affiche « Sur cet appareil ».
+- **Nouvelles cartes** : 10 par jour, par difficulté croissante puis dans l'ordre du fichier.
 - **UI** : ne dépend que du format des cartes.
 
 ### Ports du domaine
@@ -80,6 +83,8 @@ Règle de contenu : les cartes sont écrites **à partir des vraies pages de doc
 ### Outillage
 
 - Vite 8, Vitest 5, TypeScript 7 (strict, `noUncheckedIndexedAccess`). Vite+ écarté pour l'instant (1.0 sortie le 28/09/2026, installe un CLI global qui gère aussi Node et le gestionnaire de paquets) ; migration possible plus tard.
+- React 19.3 pour l'UI (sans React Compiler pour l'instant), ts-fsrs 5 pour la répétition espacée.
+- Publication : `npm run build:artifact` produit `artifact/index.html` (CSS et JS en ligne) et `artifact/decks/`, publiés sur l'artefact https://claude.ai/artifact/NB1xrVepkDfbXNsCdWVY8a (capacités `db` et `user`). Republier sur cette URL pour garder la progression.
 - Zod 4 valide les fichiers de deck, uniquement dans l'infrastructure (`src/infrastructure/deck-file/`) : le domaine n'en dépend pas.
 - Git dans le dossier, commits locaux autorisés pour Claude, jamais de push. Claude peut ajouter une dépendance s'il la juge pertinente, en expliquant son rôle.
 - `node_modules` du dossier = celui de Windows (`npm install` côté Windows). Claude installe et lance les tests dans une copie Linux séparée, pour ne pas mélanger les binaires des deux plateformes.
@@ -113,5 +118,5 @@ L'appli est un moyen, pas le but : sortir le MVP en une ou deux sessions, puis e
 ## Prochaines étapes
 
 1. ~~Deck React v1 (~60 cartes)~~ Fait le 01/10/2026 : 60 cartes dans `public/decks/react.json` (Effets & refs 12, Performance 9, État 9, Fondamentaux 8, React 19 9, Patterns 5, Server 5, Tests 3), révisables via « interroge-moi ».
-2. MVP : moteur + écran « Aujourd'hui » + « Signaler une carte », publié en artefact.
+2. ~~MVP : moteur + écran « Aujourd'hui » + « Signaler une carte », publié en artefact.~~ Fait le 01/10/2026.
 3. Compléter React, puis TanStack Query. Mode entretien et Progression dans l'appli quand je révise régulièrement.
