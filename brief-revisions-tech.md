@@ -117,7 +117,7 @@ L'appli est un moyen, pas le but : sortir le MVP en une ou deux sessions, puis e
 
 ## À reprendre (retours du 01/10/2026)
 
-1. **Le terme « commit » dans les cartes** gêne Anthony (il l'associe à git). Proposition de Claude, à trancher : garder ce terme officiel de React (phases render puis commit), le définir entre parenthèses à sa première occurrence dans chaque carte, et ajouter une carte « render vs commit » au module Fondamentaux.
+1. **Le terme « commit » dans les cartes** : décidé de garder ce terme officiel de React. Fait : carte `react.rendering.renderAndCommit` ajoutée en tête du deck (61 cartes). Reste à faire : le définir entre parenthèses à sa première occurrence dans chaque carte qui l'emploie.
 2. **Intervalles des boutons de note** (1 min / 6 min / 10 min / 8 j sur une nouvelle carte) : ce sont les étapes d'apprentissage de FSRS (1 et 10 min), puis la révision espacée en jours ; Facile saute l'apprentissage. Options possibles : afficher « dans la session » pour les intervalles du jour, ou réduire les étapes d'apprentissage.
 
 ## Prochaines étapes
