@@ -293,6 +293,202 @@
         "url": "https://react.dev/learn/removing-effect-dependencies"
       },
       "difficulty": 3
+    },
+    {
+      "id": "react.memo.purpose",
+      "moduleId": "performance",
+      "kind": "recall",
+      "question": "À quoi sert React.memo ?",
+      "answer": "memo enveloppe un composant pour que React saute son re-render quand son parent se re-rend avec des props inchangées, comparées une à une avec Object.is. C'est une optimisation de performance, pas une garantie : le composant se re-rend quand même si son propre state ou un context qu'il lit change. Ça n'a d'intérêt que pour un composant souvent re-rendu avec les mêmes props et dont le rendu est coûteux ; React Compiler applique l'équivalent automatiquement.",
+      "details": "Avant d'ajouter memo, la doc conseille de rendre la mémoïsation inutile : passer du JSX en children, garder le state au plus près de là où il sert, garder le rendu pur, éviter les effets qui mettent à jour le state. memo est inutile si une prop change à chaque rendu, comme un objet ou une fonction créés pendant le rendu : on les stabilise côté parent avec useMemo / useCallback, ou on passe des valeurs primitives.",
+      "keyPoints": [
+        "Saute le re-render si les props sont inchangées (comparaison shallow, Object.is par prop)",
+        "Optimisation de performance, pas une garantie",
+        "Se re-rend quand même si son propre state ou un context lu change",
+        "Inutile si une prop change à chaque rendu (objet ou fonction créés pendant le rendu)",
+        "React Compiler applique l'équivalent de memo à tous les composants"
+      ],
+      "pitfalls": [
+        "Avec une fonction de comparaison custom (arePropsEqual), il faut comparer toutes les props, fonctions comprises, et éviter les comparaisons profondes, très lentes"
+      ],
+      "source": {
+        "title": "memo – API Reference",
+        "url": "https://react.dev/reference/react/memo"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.useMemo.vsUseCallback",
+      "moduleId": "performance",
+      "kind": "compare",
+      "question": "Quelle est la différence entre useMemo et useCallback ?",
+      "answer": "Les deux mettent en cache quelque chose entre les rendus tant que les dépendances ne changent pas. useMemo met en cache le résultat d'une fonction : React l'appelle pendant le rendu et garde la valeur retournée. useCallback met en cache la fonction elle-même, sans l'appeler : c'est l'équivalent de useMemo(() => fn, deps).",
+      "details": "Dans une callback mémoïsée, on réduit les dépendances avec une updater function : setTodos(todos => [...todos, newTodo]) évite de dépendre de todos.",
+      "keyPoints": [
+        "useMemo : met en cache le résultat d'un calcul",
+        "useCallback : met en cache la définition de la fonction, React ne l'appelle pas",
+        "useCallback(fn, deps) ≈ useMemo(() => fn, deps)",
+        "Utile pour une prop passée à un composant memo, ou une valeur utilisée comme dépendance d'un autre hook",
+        "React Compiler fait cette mémoïsation automatiquement"
+      ],
+      "pitfalls": [
+        "Hors de ces cas, envelopper une fonction dans useCallback n'apporte rien"
+      ],
+      "source": {
+        "title": "useCallback – How is useCallback related to useMemo?",
+        "url": "https://react.dev/reference/react/useCallback#how-is-usecallback-related-to-usememo"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.rendering.parentRerender",
+      "moduleId": "performance",
+      "kind": "recall",
+      "question": "Pourquoi un composant enfant se re-rend-il quand son parent se re-rend, même si ses props n'ont pas changé ?",
+      "answer": "Un composant se rend au premier affichage, puis quand son state ou celui d'un de ses ancêtres est mis à jour. Le rendu est récursif : quand un composant se re-rend, React re-rend tous les composants qu'il retourne, sans regarder si leurs props ont changé. Ça ne veut pas dire que le DOM change : React ne modifie le DOM que s'il y a une différence entre deux rendus.",
+      "keyPoints": [
+        "Deux raisons de rendre : rendu initial, mise à jour du state du composant ou d'un ancêtre",
+        "Rendu récursif : tous les composants imbriqués sont re-rendus par défaut",
+        "Re-render ≠ mise à jour du DOM : React ne touche au DOM que s'il y a une différence",
+        "Trois étapes : trigger, render, commit, puis le navigateur peint",
+        "Pour sauter le re-render d'un sous-arbre : memo, ou React Compiler"
+      ],
+      "pitfalls": [
+        "Ce comportement par défaut coûte cher si le composant mis à jour est très haut dans l'arbre"
+      ],
+      "source": {
+        "title": "Render and Commit",
+        "url": "https://react.dev/learn/render-and-commit"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.compiler.purpose",
+      "moduleId": "performance",
+      "kind": "recall",
+      "question": "Qu'est-ce que React Compiler, et que change-t-il pour memo, useMemo et useCallback ?",
+      "answer": "React Compiler est un outil de build, stable, qui mémoïse automatiquement l'app : il saute les re-renders en cascade et les calculs coûteux, sans réécriture, tant que le code respecte les Rules of React. Pour du nouveau code, on s'appuie sur lui et on garde useMemo / useCallback pour un contrôle précis, par exemple une valeur utilisée comme dépendance d'effet. Sur du code existant, on laisse la mémoïsation manuelle en place, ou on teste soigneusement avant de la retirer.",
+      "keyPoints": [
+        "Outil de build qui mémoïse automatiquement composants, valeurs et fonctions",
+        "Optimise les re-renders en cascade et les calculs coûteux",
+        "Suppose un code qui respecte les Rules of React",
+        "Nouveau code : laisser faire le compiler, useMemo / useCallback en escape hatch (ex. dépendance d'effet)",
+        "Code existant : garder la mémoïsation manuelle ou tester avant de la retirer, car ça peut changer la sortie du compiler",
+        "Compatible React 17, 18 et 19"
+      ],
+      "source": {
+        "title": "React Compiler – Introduction",
+        "url": "https://react.dev/learn/react-compiler/introduction"
+      },
+      "since": "React Compiler 1.0",
+      "difficulty": 2
+    },
+    {
+      "id": "react.compiler.bailouts",
+      "moduleId": "performance",
+      "kind": "recall",
+      "question": "Que fait React Compiler face à du code qui enfreint les Rules of React, et comment diagnostiquer un problème ?",
+      "answer": "S'il repère du code qui pourrait enfreindre les Rules of React, il ne l'optimise pas : il saute ce composant ou ce hook plutôt que de risquer de changer le comportement. Les vrais problèmes viennent de violations subtiles qu'il n'a pas détectées, surtout du code qui compte sur la mémoïsation pour être correct, comme un effet qui dépend de l'égalité référentielle. Pour diagnostiquer, le badge Memo ✨ de React DevTools indique qu'un composant est compilé, et la directive \"use no memo\" permet d'exclure un composant pour isoler le problème.",
+      "keyPoints": [
+        "Code qui pourrait enfreindre les Rules of React : optimisation sautée, sans risque",
+        "Erreurs de compilation rares ; la plupart des problèmes apparaissent au runtime",
+        "Cause typique : code qui dépend de la mémoïsation pour être correct (effet basé sur l'égalité référentielle, dépendances instables)",
+        "Badge Memo ✨ dans React DevTools = composant compilé",
+        "\"use no memo\" en tête de composant pour l'exclure temporairement",
+        "Vérifier d'abord les violations des règles avec ESLint"
+      ],
+      "source": {
+        "title": "React Compiler – Debugging and Troubleshooting",
+        "url": "https://react.dev/learn/react-compiler/debugging"
+      },
+      "since": "React Compiler 1.0",
+      "difficulty": 3
+    },
+    {
+      "id": "react.lazy.codeSplitting",
+      "moduleId": "performance",
+      "kind": "recall",
+      "question": "Comment charger le code d'un composant à la demande avec lazy et Suspense ?",
+      "answer": "lazy reporte le chargement du code d'un composant jusqu'à son premier rendu : on lui passe une fonction qui retourne un import() dynamique, et le module doit exporter le composant par défaut. Tant que le code charge, le composant suspend : on l'entoure, lui ou un de ses parents, d'un <Suspense fallback={...}> pour afficher un indicateur de chargement. Le composant lazy se déclare au top level du module, jamais dans un autre composant.",
+      "keyPoints": [
+        "const Preview = lazy(() => import('./Preview.js')) : chargé au premier rendu",
+        "Le module doit exporter le composant par défaut (export default)",
+        "Pendant le chargement, le composant suspend : <Suspense fallback> au-dessus",
+        "import() dynamique : nécessite le support du bundler ou du framework",
+        "Déclaration au top level du module"
+      ],
+      "pitfalls": [
+        "Déclarer un composant lazy dans un autre composant réinitialise tout son state à chaque re-render"
+      ],
+      "source": {
+        "title": "lazy – API Reference",
+        "url": "https://react.dev/reference/react/lazy"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.useTransition.purpose",
+      "moduleId": "performance",
+      "kind": "recall",
+      "question": "À quoi sert useTransition ?",
+      "answer": "useTransition permet de marquer des mises à jour de state comme une Transition : React fait ce rendu en arrière-plan, sans bloquer, et une mise à jour plus urgente peut l'interrompre. L'UI reste réactive : si l'utilisateur clique sur un onglet puis change d'avis, le second clic est traité tout de suite. Le hook renvoie isPending, pour afficher un état en cours, et startTransition, pour envelopper les mises à jour.",
+      "details": "Avec Suspense, une Transition n'attend que le temps nécessaire pour ne pas masquer du contenu déjà affiché (ex. le conteneur d'onglets), ce qui évite des indicateurs de chargement indésirables. Plusieurs Transitions en cours sont actuellement regroupées.",
+      "keyPoints": [
+        "Renvoie [isPending, startTransition]",
+        "Mises à jour marquées comme Transition : non bloquantes et interruptibles",
+        "Il faut avoir accès au setter du state ; pour réagir à une prop ou à la valeur d'un hook : useDeferredValue",
+        "Après un await, re-envelopper les setState dans un startTransition",
+        "Ne peut pas piloter un input texte",
+        "Les fonctions passées à startTransition s'appellent des Actions"
+      ],
+      "source": {
+        "title": "useTransition – API Reference",
+        "url": "https://react.dev/reference/react/useTransition"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.useDeferredValue.vsDebounce",
+      "moduleId": "performance",
+      "kind": "compare",
+      "question": "À quoi sert useDeferredValue, et en quoi est-ce différent d'un debounce ?",
+      "answer": "useDeferredValue permet de différer la mise à jour d'une partie de l'UI : React re-rend d'abord avec l'ancienne valeur, puis tente un rendu en arrière-plan avec la nouvelle. Contrairement à un debounce, il n'y a pas de délai fixe, le rendu différé suit la vitesse de l'appareil, et il est interruptible : une nouvelle frappe abandonne le rendu en cours au lieu de bloquer. Le debounce reste utile pour du travail hors rendu, comme limiter les requêtes réseau.",
+      "keyPoints": [
+        "Premier rendu avec l'ancienne valeur, puis rendu en arrière-plan avec la nouvelle",
+        "Rendu en arrière-plan interruptible, sans délai fixe",
+        "Debounce / throttle : bloquants, ils retardent seulement le moment où le rendu bloque",
+        "Intégré à Suspense : on garde l'ancien contenu au lieu d'afficher le fallback",
+        "Le composant lent doit être enveloppé dans memo, sinon il se re-rend quand même",
+        "Passer une primitive ou un objet créé hors du rendu"
+      ],
+      "pitfalls": [
+        "useDeferredValue n'évite pas à lui seul les requêtes réseau supplémentaires"
+      ],
+      "source": {
+        "title": "useDeferredValue – API Reference",
+        "url": "https://react.dev/reference/react/useDeferredValue"
+      },
+      "difficulty": 3
+    },
+    {
+      "id": "react.profiler.slowRenders",
+      "moduleId": "performance",
+      "kind": "recall",
+      "question": "Comment repérer un rendu lent dans une app React ?",
+      "answer": "En interactif, avec l'onglet Profiler de React DevTools. Par le code, avec le composant <Profiler id onRender>, dont le callback reçoit notamment actualDuration, le temps de rendu réel du sous-arbre, et baseDuration, une estimation sans aucune optimisation. Le profiling ajoute un surcoût, il est donc désactivé par défaut dans le build de production.",
+      "details": "En développement, les React Performance Tracks affichent aussi chaque rendu de composant, sous forme de flamegraph, dans le panneau Performance des DevTools du navigateur ; les composants enveloppés dans <Profiler> y apparaissent aussi dans les builds de profiling.",
+      "keyPoints": [
+        "Onglet Profiler de React DevTools (interactif)",
+        "<Profiler id onRender> pour mesurer par le code",
+        "actualDuration (temps réel, reflète l'effet de memo / useMemo) vs baseDuration (estimation sans optimisation)",
+        "phase : mount, update ou nested-update",
+        "Désactivé en production par défaut ; build de profiling spécial sinon"
+      ],
+      "source": {
+        "title": "<Profiler> – API Reference",
+        "url": "https://react.dev/reference/react/Profiler"
+      },
+      "difficulty": 2
     }
   ]
 }
