@@ -671,6 +671,169 @@
         "url": "https://react.dev/learn/passing-data-deeply-with-context"
       },
       "difficulty": 2
+    },
+    {
+      "id": "react.lists.key",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "À quoi sert la key dans une liste, et pourquoi éviter l'index du tableau ?",
+      "answer": "La key dit à React à quel élément du tableau correspond chaque composant, pour qu'il les retrouve d'un rendu à l'autre, même si des éléments sont insérés, supprimés ou réordonnés. Elle doit être unique parmi les frères et stable dans le temps : idéalement l'id qui vient des données. L'index, que React utilise par défaut, change de sens dès que l'ordre change, ce qui mène à des bugs subtils et déroutants.",
+      "details": "Le composant ne reçoit pas key en prop : si l'id lui est utile, on le passe séparément, <Profile key={id} userId={id} />. Pour une liste de groupes d'éléments, on utilise <Fragment key={...}>, car <>…</> n'accepte pas de key.",
+      "keyPoints": [
+        "Identifie chaque élément parmi ses frères, indépendamment de sa position",
+        "Unique parmi les frères, pas globalement",
+        "Stable : ne jamais la générer pendant le rendu",
+        "Source : id de la base, ou crypto.randomUUID() / compteur au moment de la création",
+        "Sans key, React utilise l'index, qui change si on insère, supprime ou réordonne"
+      ],
+      "pitfalls": [
+        "key={Math.random()} : les keys ne correspondent jamais, tous les composants et le DOM sont recréés à chaque rendu, et la saisie utilisateur est perdue"
+      ],
+      "source": {
+        "title": "Rendering Lists",
+        "url": "https://react.dev/learn/rendering-lists"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.components.purity",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'un composant pur, et pourquoi React l'exige-t-il ?",
+      "answer": "Un composant pur ne modifie rien qui existait avant son rendu, props, state et context compris, et renvoie toujours le même JSX pour les mêmes entrées. React le suppose, parce que ça lui permet de rendre côté serveur, de sauter le rendu d'un composant dont les entrées n'ont pas changé, et d'interrompre puis reprendre un rendu sans risque. Les side effects vont dans les event handlers, et en dernier recours dans un useEffect.",
+      "keyPoints": [
+        "Ne modifie rien qui existait avant le rendu (props, state, context compris)",
+        "Mêmes entrées, même JSX",
+        "Muter une variable créée pendant le rendu est permis (local mutation)",
+        "Side effects : event handlers, useEffect en dernier recours",
+        "Le Strict Mode appelle les composants deux fois en dev pour détecter les impuretés",
+        "Bénéfices : rendu serveur, rendu sauté (memo), rendu interruptible"
+      ],
+      "source": {
+        "title": "Keeping Components Pure",
+        "url": "https://react.dev/learn/keeping-components-pure"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.props.immutable",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "Un composant peut-il modifier ses props ? Comment un enfant fait-il changer une valeur qui vient de son parent ?",
+      "answer": "Non, les props sont immuables : ce sont des snapshots en lecture seule, et chaque rendu en reçoit une nouvelle version. Pour qu'une valeur change, l'enfant doit demander à son parent de lui passer de nouvelles props, typiquement en appelant un event handler reçu en prop qui met à jour le state du parent. Pour de l'interactivité locale, on utilise du state.",
+      "keyPoints": [
+        "Props immuables, en lecture seule",
+        "Chaque rendu reçoit une nouvelle version des props",
+        "L'enfant appelle un handler reçu en prop ; le parent met à jour son state et repasse de nouvelles props",
+        "Interactivité locale : state",
+        "Valeur par défaut ({ size = 100 }) : utilisée si la prop est absente ou undefined, pas si elle vaut null ou 0"
+      ],
+      "pitfalls": [
+        "Utiliser le spread {...props} partout est un signal : il faut souvent découper les composants et passer du JSX en children"
+      ],
+      "source": {
+        "title": "Passing Props to a Component",
+        "url": "https://react.dev/learn/passing-props-to-a-component"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.hooks.rules",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "Quelles sont les règles des hooks, et pourquoi existent-elles ?",
+      "answer": "Deux règles : n'appeler les hooks qu'au top level, et seulement depuis des fonctions React, c'est-à-dire des composants ou des custom hooks. Donc jamais dans une condition, une boucle, après un return conditionnel, dans un event handler, dans un try/catch/finally, ni dans une fonction passée à useMemo, useReducer ou useEffect. React s'appuie sur l'ordre d'appel des hooks, qui doit être le même à chaque rendu, pour savoir quel state correspond à quel hook.",
+      "details": "En interne, React garde pour chaque composant une liste de paires de state et un index remis à 0 avant chaque rendu : chaque appel à useState prend la paire suivante. Exception : l'API use (React 19) peut être appelée dans une condition ou une boucle, mais pas dans un try/catch. Le plugin eslint-plugin-react-hooks détecte les violations.",
+      "keyPoints": [
+        "Top level uniquement : pas de condition, boucle, return conditionnel avant, try/catch/finally",
+        "Seulement dans un composant ou un custom hook",
+        "Pas dans un event handler, ni dans une fonction passée à useMemo / useReducer / useEffect",
+        "Raison : React identifie les hooks par leur ordre d'appel, stable d'un rendu à l'autre",
+        "eslint-plugin-react-hooks pour détecter les erreurs"
+      ],
+      "source": {
+        "title": "Rules of Hooks",
+        "url": "https://react.dev/reference/rules/rules-of-hooks"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.strictMode.purpose",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "À quoi sert <StrictMode>, et que fait-il en développement ?",
+      "answer": "StrictMode aide à trouver des bugs tôt, en développement uniquement, sans impact sur la production. Il rend les composants une fois de plus pour détecter un rendu impur, relance les effets et les ref callbacks une fois de plus pour détecter une cleanup manquante, et signale l'usage d'API dépréciées. On peut l'activer sur toute l'app ou sur une partie, mais on ne peut pas en sortir à l'intérieur d'un arbre StrictMode.",
+      "details": "Sont appelés deux fois : le corps du composant (pas les event handlers), les fonctions passées à useState, aux setters, à useMemo et à useReducer, et certaines méthodes de class components. Depuis React 19.3, le double appel des effets s'applique aussi pendant l'hydration, comme pour les roots rendues côté client.",
+      "keyPoints": [
+        "Double rendu : détecte le rendu impur",
+        "Double setup / cleanup des effets : détecte une cleanup manquante",
+        "Double exécution des ref callbacks : détecte une cleanup de ref manquante",
+        "Avertit sur les API dépréciées",
+        "Dev uniquement ; activable sur une partie de l'app, sans opt-out à l'intérieur"
+      ],
+      "source": {
+        "title": "<StrictMode> – API Reference",
+        "url": "https://react.dev/reference/react/StrictMode"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.jsx.basics",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "Qu'est-ce que JSX, et en quoi diffère-t-il du HTML ?",
+      "answer": "JSX est une extension de syntaxe de JavaScript qui permet d'écrire du balisage proche du HTML dans un fichier JS ; c'est indépendant de React, même si les deux vont souvent ensemble. Il est transformé en objets JavaScript, d'où ses règles : un seul élément racine, toutes les balises fermées, et des attributs en camelCase, comme className au lieu de class. On y insère des expressions JavaScript entre accolades.",
+      "keyPoints": [
+        "Extension de syntaxe JS, distincte de React",
+        "Transformé en objets JavaScript",
+        "Un seul élément racine (ou un Fragment <>…</>), car on ne peut pas retourner deux objets",
+        "Toutes les balises fermées (<img />)",
+        "camelCase : className, strokeWidth ; exceptions aria-* et data-*",
+        "Expressions JS entre accolades"
+      ],
+      "source": {
+        "title": "Writing Markup with JSX",
+        "url": "https://react.dev/learn/writing-markup-with-jsx"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.conditionalRendering.andWithZero",
+      "moduleId": "fundamentals",
+      "kind": "code",
+      "question": "Qu'affiche ce composant quand messageCount vaut 0 ? Comment le corriger ?",
+      "code": "function Inbox({ messageCount }) {\n  return (\n    <div>\n      {messageCount && <p>Nouveaux messages</p>}\n    </div>\n  );\n}",
+      "answer": "Il affiche 0. Avec &&, si la partie gauche vaut 0, toute l'expression vaut 0, et React rend ce nombre au lieu de ne rien afficher. On rend la partie gauche booléenne, messageCount > 0 && <p>…</p>, ou on utilise un ternaire.",
+      "keyPoints": [
+        "cond && <A /> vaut <A /> si cond est vraie, sinon la valeur de cond",
+        "0 est une valeur que React affiche",
+        "Correctif : messageCount > 0 && …",
+        "Alternatives : ternaire, if, ou retourner null"
+      ],
+      "source": {
+        "title": "Conditional Rendering",
+        "url": "https://react.dev/learn/conditional-rendering"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.fragment.purpose",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "À quoi sert un Fragment, et quand faut-il écrire <Fragment> plutôt que <>…</> ?",
+      "answer": "Un Fragment regroupe plusieurs éléments sans ajouter de nœud DOM, donc sans effet sur le layout ni les styles, par exemple pour retourner plusieurs éléments depuis un composant. La syntaxe courte <>…</> n'accepte aucun attribut : il faut <Fragment> explicitement pour passer une key, typiquement dans une liste, ou une ref depuis React 19.3.",
+      "details": "Les Fragment refs donnent une FragmentInstance qui agit sur les enfants DOM de premier niveau : addEventListener, focus, observeUsing (IntersectionObserver, ResizeObserver), scrollIntoView. Elles évitent d'ajouter un div wrapper juste pour écouter un groupe d'éléments ou observer leur visibilité.",
+      "keyPoints": [
+        "Regroupe sans nœud DOM : aucun effet sur le layout ni les styles",
+        "<>…</> : syntaxe courte, sans attributs",
+        "<Fragment key={id}> pour une liste de groupes d'éléments",
+        "<Fragment ref={ref}> (React 19.3) : agit sur les enfants DOM sans wrapper"
+      ],
+      "source": {
+        "title": "<Fragment> – API Reference",
+        "url": "https://react.dev/reference/react/Fragment"
+      },
+      "difficulty": 1
     }
   ]
 }
