@@ -489,6 +489,188 @@
         "url": "https://react.dev/reference/react/Profiler"
       },
       "difficulty": 2
+    },
+    {
+      "id": "react.useState.snapshot",
+      "moduleId": "state",
+      "kind": "code",
+      "question": "Après un clic sur ce bouton, que vaut number ? Pourquoi ?",
+      "code": "function Counter() {\n  const [number, setNumber] = useState(0);\n\n  return (\n    <button onClick={() => {\n      setNumber(number + 1);\n      setNumber(number + 1);\n      setNumber(number + 1);\n    }}>+3</button>\n  );\n}",
+      "answer": "number vaut 1, pas 3. Le state se comporte comme un snapshot : pendant ce rendu, number vaut 0, et appeler le setter ne change pas la variable, il demande un nouveau rendu. Les trois appels valent donc setNumber(0 + 1). Pour enchaîner les incréments, on passe une updater function : setNumber(n => n + 1).",
+      "details": "Même du code asynchrone voit le snapshot de son rendu : setNumber(number + 5) suivi d'un setTimeout(() => alert(number), 3000) affiche 0, pas 5. Chaque rendu a ses propres event handlers, qui voient le state de ce rendu.",
+      "keyPoints": [
+        "Le state est un snapshot : sa valeur ne change jamais pendant un rendu",
+        "Le setter ne modifie pas la variable courante, il demande un nouveau rendu",
+        "Les trois appels valent setNumber(0 + 1)",
+        "Correctif : setNumber(n => n + 1)"
+      ],
+      "source": {
+        "title": "State as a Snapshot",
+        "url": "https://react.dev/learn/state-as-a-snapshot"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.useState.updaterFunction",
+      "moduleId": "state",
+      "kind": "recall",
+      "question": "Quand et pourquoi passer une updater function au setter, comme setNumber(n => n + 1) ?",
+      "answer": "React ne traite les mises à jour de state qu'une fois tout le code du handler exécuté : c'est le batching. Passer une valeur remplace le state ; passer une fonction la met en file d'attente, et React l'appelle au rendu suivant avec le résultat de la mise à jour précédente. On l'utilise pour mettre à jour plusieurs fois le même state dans un même événement, et plus généralement pour calculer le prochain state à partir du précédent.",
+      "details": "React ne regroupe pas plusieurs événements intentionnels, comme deux clics : chacun est traité séparément, ce qui évite par exemple qu'un second clic soumette un formulaire que le premier a désactivé. L'updater function sert aussi à retirer une dépendance d'un effet ou d'un useCallback, puisqu'on n'a plus besoin de lire le state courant.",
+      "keyPoints": [
+        "Batching : les mises à jour sont traitées après la fin du handler, en un seul rendu",
+        "Valeur : « remplace par » ; fonction : « fais ceci avec la valeur précédente »",
+        "Les updaters sont mis en file et appliqués au rendu suivant, dans l'ordre",
+        "setNumber(number + 5) puis setNumber(n => n + 1) donne 6 (en partant de 0)",
+        "L'updater doit être pur : il ne fait que retourner le nouveau state"
+      ],
+      "source": {
+        "title": "Queueing a Series of State Updates",
+        "url": "https://react.dev/learn/queueing-a-series-of-state-updates"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.state.immutability",
+      "moduleId": "state",
+      "kind": "recall",
+      "question": "Pourquoi ne faut-il pas muter un objet ou un tableau stocké dans le state ?",
+      "answer": "Parce que React ne voit pas le changement : sans appel au setter, il n'y a pas de re-render, et on altère en plus le snapshot des rendus précédents. On traite donc le state comme en lecture seule : on crée une nouvelle version de l'objet, par exemple avec le spread { ...obj, champ: valeur }, et on la passe au setter. Le spread est superficiel : pour un objet imbriqué, il faut recopier chaque niveau jusqu'à celui qu'on modifie, ou utiliser Immer.",
+      "details": "Raisons données par la doc : le debugging (les anciens console.log ne sont pas écrasés), les optimisations (vérifier si props et state ont changé est rapide quand rien n'est muté), les nouvelles fonctionnalités de React qui supposent des snapshots, des fonctionnalités comme undo/redo ou un historique plus simples à écrire, et une implémentation de React plus simple.",
+      "keyPoints": [
+        "Muter ne déclenche pas de re-render : React ne voit pas le changement",
+        "La mutation altère aussi les snapshots des rendus précédents",
+        "Créer une copie ({ ...obj, x: 1 }) et la passer au setter",
+        "Spread superficiel : recopier tous les niveaux jusqu'à la propriété imbriquée",
+        "Immer permet d'écrire en style mutable et produit les copies"
+      ],
+      "source": {
+        "title": "Updating Objects in State",
+        "url": "https://react.dev/learn/updating-objects-in-state"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.state.liftingStateUp",
+      "moduleId": "state",
+      "kind": "recall",
+      "question": "Comment faire pour que deux composants partagent le même state ?",
+      "answer": "On fait remonter le state (lifting state up) : on le retire des deux composants, on le place dans leur parent commun le plus proche, puis on le leur transmet en props, avec les event handlers qui permettent de le modifier. Chaque morceau de state a ainsi un seul composant propriétaire : c'est la single source of truth. Les enfants deviennent contrôlés, pilotés par leurs props plutôt que par un state local.",
+      "keyPoints": [
+        "Retirer le state des enfants",
+        "Le placer dans le parent commun le plus proche",
+        "Le transmettre en props, avec les handlers pour le modifier",
+        "Un propriétaire par morceau de state : single source of truth",
+        "Enfant contrôlé (piloté par les props) vs non contrôlé (state local)"
+      ],
+      "source": {
+        "title": "Sharing State Between Components",
+        "url": "https://react.dev/learn/sharing-state-between-components"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.state.structure",
+      "moduleId": "state",
+      "kind": "recall",
+      "question": "Quels principes suivre pour bien structurer le state d'un composant ?",
+      "answer": "Le but est un state facile à mettre à jour sans introduire d'erreur : aussi simple que possible, mais pas plus. On regroupe les variables toujours mises à jour ensemble, on évite les états contradictoires, et on ne stocke pas ce qu'on peut calculer depuis les props ou le state pendant le rendu. On évite aussi la duplication, par exemple en gardant l'id de l'élément sélectionné plutôt que l'objet, et l'imbrication profonde, en préférant une structure à plat.",
+      "keyPoints": [
+        "Regrouper le state lié",
+        "Éviter les contradictions (états impossibles)",
+        "Éviter le state redondant : le calculer pendant le rendu",
+        "Éviter la duplication : garder un id plutôt qu'une copie de l'objet",
+        "Éviter l'imbrication profonde : aplatir"
+      ],
+      "pitfalls": [
+        "Recopier une prop dans le state (useState(messageColor)) : le state ne suit plus la prop, car il n'est initialisé qu'au premier rendu. Si c'est voulu, nommer la prop initialColor ou defaultColor"
+      ],
+      "source": {
+        "title": "Choosing the State Structure",
+        "url": "https://react.dev/learn/choosing-the-state-structure"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.state.treePosition",
+      "moduleId": "state",
+      "kind": "recall",
+      "question": "Quand React conserve-t-il le state d'un composant, et quand le réinitialise-t-il ?",
+      "answer": "Le state est lié à la position du composant dans l'arbre de rendu, pas à la balise JSX. Tant que le même composant est rendu à la même position, React garde son state, même si ses props changent. S'il est retiré, ou si un composant d'un autre type est rendu à cette position, React détruit son state et celui de tout son sous-arbre.",
+      "keyPoints": [
+        "State associé à une position dans l'arbre, pas au JSX",
+        "Même composant, même position : state conservé",
+        "Composant retiré : state détruit",
+        "Autre type à la même position (même un parent qui passe de section à div) : tout le sous-arbre est réinitialisé",
+        "Garder un state quand le composant disparaît : le remonter, masquer en CSS, ou le stocker ailleurs (localStorage)"
+      ],
+      "pitfalls": [
+        "Déclarer un composant dans un autre recrée une nouvelle fonction à chaque rendu : React y voit un autre composant et réinitialise son state"
+      ],
+      "source": {
+        "title": "Preserving and Resetting State",
+        "url": "https://react.dev/learn/preserving-and-resetting-state"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.state.resetWithKey",
+      "moduleId": "state",
+      "kind": "recall",
+      "question": "Comment forcer la réinitialisation du state d'un composant, par exemple quand on change de destinataire dans un chat ?",
+      "answer": "On lui donne une key différente : React utilise alors la key comme partie de la position au lieu de l'ordre dans le parent, et considère qu'il s'agit d'un autre composant, dont il recrée le state. Par exemple, <Chat key={to.id} contact={to} /> repart d'un state vide à chaque changement de destinataire. Autre option : rendre les deux variantes à des positions différentes de l'arbre.",
+      "details": "C'est aussi la solution recommandée plutôt qu'un effet qui remet le state à zéro quand une prop change (voir « You Might Not Need an Effect »).",
+      "keyPoints": [
+        "Une key différente = un autre composant pour React : state recréé",
+        "La key remplace l'ordre dans le parent pour identifier le composant",
+        "Exemple : <Chat key={to.id} contact={to} />",
+        "Les keys ne sont pas uniques globalement, seulement au sein du parent",
+        "Alternative : rendre les variantes à des positions différentes"
+      ],
+      "source": {
+        "title": "Preserving and Resetting State",
+        "url": "https://react.dev/learn/preserving-and-resetting-state"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.useReducer.vsUseState",
+      "moduleId": "state",
+      "kind": "compare",
+      "question": "useState ou useReducer : quand passer à un reducer ?",
+      "answer": "Un reducer regroupe la logique de mise à jour dans une fonction pure hors du composant : les handlers dispatchent des actions qui décrivent ce qui s'est passé, et le reducer calcule le prochain state. Il devient intéressant quand beaucoup de handlers modifient le state de façon similaire ou complexe : il sépare le « comment » de la mise à jour du « ce qui s'est passé », se teste isolément et se débogue en loggant chaque action. Pour des mises à jour simples, useState reste plus court, et les deux sont équivalents.",
+      "keyPoints": [
+        "Reducer : (state, action) => prochain state, fonction pure hors du composant",
+        "Les handlers dispatchent des actions au lieu de modifier le state",
+        "Critères de la doc : taille du code, lisibilité, debugging, tests, préférence personnelle",
+        "Reducer pur : pas de requête, pas de timeout, pas de mutation",
+        "Une action = une interaction utilisateur (reset_form plutôt que cinq set_field)"
+      ],
+      "source": {
+        "title": "Extracting State Logic into a Reducer",
+        "url": "https://react.dev/learn/extracting-state-logic-into-a-reducer"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.context.whenToUse",
+      "moduleId": "state",
+      "kind": "recall",
+      "question": "À quoi sert Context, et que faut-il essayer avant d'y recourir ?",
+      "answer": "Context permet à un composant de rendre une information disponible à tout l'arbre en dessous, à n'importe quelle profondeur, sans la passer en props : on évite le prop drilling. Avant d'y recourir, la doc conseille de passer simplement des props, ce qui garde le flux de données explicite, puis d'extraire des composants et de leur passer du JSX en children. Cas d'usage typiques : thème, utilisateur connecté, routing, ou state complexe géré avec un reducer.",
+      "details": "Depuis React 19, on fournit la valeur avec <MyContext value={...}> ; <MyContext.Provider> est l'ancienne syntaxe. Tous les composants qui lisent le context se re-rendent quand sa valeur change.",
+      "keyPoints": [
+        "createContext(defaultValue), useContext(MyContext), <MyContext value={...}> pour fournir",
+        "Un composant lit la valeur du provider le plus proche au-dessus de lui",
+        "Avant : passer des props, puis passer du JSX en children",
+        "Cas d'usage : thème, compte courant, routing, state global avec reducer + context",
+        "Les composants qui lisent le context se re-rendent quand sa valeur change"
+      ],
+      "source": {
+        "title": "Passing Data Deeply with Context",
+        "url": "https://react.dev/learn/passing-data-deeply-with-context"
+      },
+      "difficulty": 2
     }
   ]
 }
