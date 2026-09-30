@@ -1229,6 +1229,62 @@
         "url": "https://react.dev/reference/rsc/server-components"
       },
       "difficulty": 3
+    },
+    {
+      "id": "react.testing.guidingPrinciple",
+      "moduleId": "testing",
+      "kind": "recall",
+      "question": "Quel est le principe directeur de Testing Library ?",
+      "answer": "« Plus vos tests ressemblent à la façon dont le logiciel est utilisé, plus ils vous donnent confiance. » Concrètement, on teste à travers le DOM, comme un utilisateur, et non via les instances ou le fonctionnement interne des composants. On évite donc de tester les détails d'implémentation.",
+      "keyPoints": [
+        "Plus un test ressemble à l'usage réel, plus il donne confiance",
+        "Interagir avec des nœuds DOM, pas avec des instances de composants",
+        "Ne pas tester les détails d'implémentation",
+        "Chercher les éléments comme un utilisateur : rôle, label, texte"
+      ],
+      "source": {
+        "title": "Testing Library – Guiding Principles",
+        "url": "https://testing-library.com/docs/guiding-principles"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.testing.queries",
+      "moduleId": "testing",
+      "kind": "recall",
+      "question": "Quelles queries de Testing Library privilégier, et quelle différence entre getBy, queryBy et findBy ?",
+      "answer": "On privilégie les queries accessibles à tous, getByRole en tête, puis getByLabelText, getByPlaceholderText, getByText et getByDisplayValue ; ensuite getByAltText et getByTitle ; et getByTestId en dernier recours, car l'utilisateur ne voit pas ces attributs. getBy lève une erreur si rien ne correspond, queryBy renvoie null, ce qui sert à vérifier une absence, et findBy est asynchrone et attend l'élément. Les trois lèvent une erreur s'il y a plusieurs résultats : on utilise alors les variantes AllBy.",
+      "keyPoints": [
+        "Priorité : getByRole > getByLabelText > getByPlaceholderText > getByText > getByDisplayValue",
+        "Puis getByAltText, getByTitle ; getByTestId en dernier recours",
+        "getBy : erreur si aucun résultat ; queryBy : null (tester une absence) ; findBy : asynchrone",
+        "Plusieurs résultats : erreur pour les trois, utiliser *AllBy",
+        "Passer par screen plutôt que par le container"
+      ],
+      "source": {
+        "title": "Testing Library – About Queries",
+        "url": "https://testing-library.com/docs/queries/about"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.testing.userEventVsFireEvent",
+      "moduleId": "testing",
+      "kind": "compare",
+      "question": "Quelle est la différence entre userEvent et fireEvent ?",
+      "answer": "fireEvent déclenche un seul événement DOM, alors que user-event simule l'interaction complète comme dans un navigateur : taper du texte donne le focus puis déclenche les événements clavier et input un par un. user-event vérifie aussi que l'élément est visible et interactif, par exemple il refuse de taper dans un champ désactivé. On le préfère donc dans la plupart des cas, avec const user = userEvent.setup() avant le render et des appels awaités, comme await user.click(...).",
+      "keyPoints": [
+        "fireEvent : dispatch d'un événement DOM isolé",
+        "user-event : interaction complète, plusieurs événements (focus, clavier, input…)",
+        "Vérifie visibilité et interactivité (pas de clic sur un élément caché, pas de saisie dans un champ désactivé)",
+        "const user = userEvent.setup() avant le render ; méthodes asynchrones (await)",
+        "À préférer à fireEvent dans la plupart des cas"
+      ],
+      "source": {
+        "title": "user-event – Introduction",
+        "url": "https://testing-library.com/docs/user-event/intro"
+      },
+      "difficulty": 2
     }
   ]
 }
