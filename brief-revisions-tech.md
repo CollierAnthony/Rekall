@@ -80,7 +80,8 @@ Règle de contenu : les cartes sont écrites **à partir des vraies pages de doc
 ### Outillage
 
 - Vite 8, Vitest 5, TypeScript 7 (strict, `noUncheckedIndexedAccess`). Vite+ écarté pour l'instant (1.0 sortie le 28/09/2026, installe un CLI global qui gère aussi Node et le gestionnaire de paquets) ; migration possible plus tard.
-- Git dans le dossier, commits locaux autorisés pour Claude, jamais de push.
+- Zod 4 valide les fichiers de deck, uniquement dans l'infrastructure (`src/infrastructure/deck-file/`) : le domaine n'en dépend pas.
+- Git dans le dossier, commits locaux autorisés pour Claude, jamais de push. Claude peut ajouter une dépendance s'il la juge pertinente, en expliquant son rôle.
 - `node_modules` du dossier = celui de Windows (`npm install` côté Windows). Claude installe et lance les tests dans une copie Linux séparée, pour ne pas mélanger les binaires des deux plateformes.
 
 ## Les écrans
@@ -111,6 +112,6 @@ L'appli est un moyen, pas le but : sortir le MVP en une ou deux sessions, puis e
 
 ## Prochaines étapes
 
-1. Deck React v1 (~60 cartes) dans `public/decks/react.json`, révisable tout de suite via « interroge-moi ». Fait : module Effets & refs (12 cartes, 01/10/2026).
+1. ~~Deck React v1 (~60 cartes)~~ Fait le 01/10/2026 : 60 cartes dans `public/decks/react.json` (Effets & refs 12, Performance 9, État 9, Fondamentaux 8, React 19 9, Patterns 5, Server 5, Tests 3), révisables via « interroge-moi ».
 2. MVP : moteur + écran « Aujourd'hui » + « Signaler une carte », publié en artefact.
 3. Compléter React, puis TanStack Query. Mode entretien et Progression dans l'appli quand je révise régulièrement.
