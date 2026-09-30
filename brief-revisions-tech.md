@@ -24,9 +24,9 @@ Principe retenu : **rappel actif + répétition espacée**. Pas de QCM comme for
 
 Le contenu est séparé du moteur. Ajouter une techno = ajouter un fichier de deck et une ligne dans l'index, sans toucher au code.
 
-- **Index des decks** : `decks/index.json` liste les decks disponibles. L'UI le lit pour savoir quels decks proposer : rien n'est codé en dur.
-- **Decks** : un fichier JSON par techno (`decks/react.json`, `decks/tanstack-query.json`…), publié avec la page.
-- **Moteur de répétition espacée** : FSRS via la librairie `ts-fsrs` (chargée depuis jsdelivr, à vérifier au build) ; à défaut, un SM-2 simplifié maison. Il ne sait rien de React.
+- **Index des decks** : `public/decks/index.json` liste les fichiers de deck. L'UI le lit pour savoir quels decks charger : rien n'est codé en dur.
+- **Decks** : un fichier JSON par techno (`public/decks/react.json`, `public/decks/tanstack-query.json`…), copié tel quel dans le build et publié avec la page. Un test fait passer chaque deck listé dans le même parseur que l'appli.
+- **Moteur de répétition espacée** : FSRS via la librairie `ts-fsrs` (dépendance npm bundlée par Vite, à installer au MVP) ; à défaut, un SM-2 simplifié maison. Il ne sait rien de React.
 - **Progression** : par carte, stockée dans `db` (échéance, stabilité, difficulté FSRS, révisions, oublis), clé = `id` de la carte.
 - **UI** : ne dépend que du format des cartes.
 
@@ -41,13 +41,15 @@ Le domaine (quelles cartes sortent aujourd'hui, limite de nouvelles cartes par j
 
 ### Format des decks
 
+Types du domaine : `src/domain/deck.ts`. Parseur des fichiers : `src/infrastructure/deck-file/`.
+
 ```ts
-// decks/index.json
-type DeckIndex = {
-  decks: { id: string; title: string; file: string }[];  // ex. { id: "react", title: "React", file: "react.json" }
+// public/decks/index.json
+type DeckIndexFile = {
+  deckFiles: string[];    // ex. ["react.json"] — le fichier doit s'appeler <id du deck>.json
 };
 
-// decks/<id>.json
+// public/decks/<id>.json
 type Deck = {
   id: string;             // "react"
   title: string;          // "React"
@@ -57,11 +59,11 @@ type Deck = {
 };
 
 type Card = {
-  id: string;             // stable, ex. "react.useEffect.cleanup" — sert de clé de progression, ne jamais le changer
+  id: string;             // stable, préfixé par l'id du deck, ex. "react.useEffect.cleanup" — clé de progression, ne jamais le changer
   moduleId: string;       // référence un module déclaré dans le deck
   kind: "recall" | "code" | "compare";
   question: string;
-  code?: string;          // pour les défis de code
+  code?: string;          // obligatoire si kind = "code" (union discriminée côté domaine)
   answer: string;         // réponse courte, 2 à 4 phrases, dicible à l'oral
   details?: string;       // pour creuser
   keyPoints: string[];    // checklist d'auto-évaluation + grille de correction pour Claude
@@ -73,7 +75,13 @@ type Card = {
 };
 ```
 
-Règle de contenu : les cartes sont écrites **à partir des vraies pages de doc** (lues au moment de la rédaction), pas de mémoire, et chacune cite sa source. Doc à jour : React 19.2 et React Compiler.
+Règle de contenu : les cartes sont écrites **à partir des vraies pages de doc** (lues au moment de la rédaction), pas de mémoire, et chacune cite sa source. Doc à jour : React 19.3 (sortie le 9 septembre 2026) et React Compiler 1.0.
+
+### Outillage
+
+- Vite 8, Vitest 5, TypeScript 7 (strict, `noUncheckedIndexedAccess`). Vite+ écarté pour l'instant (1.0 sortie le 28/09/2026, installe un CLI global qui gère aussi Node et le gestionnaire de paquets) ; migration possible plus tard.
+- Git dans le dossier, commits locaux autorisés pour Claude, jamais de push.
+- `node_modules` du dossier = celui de Windows (`npm install` côté Windows). Claude installe et lance les tests dans une copie Linux séparée, pour ne pas mélanger les binaires des deux plateformes.
 
 ## Les écrans
 
@@ -90,8 +98,8 @@ Estimation : 150 à 200 cartes au total. **Deck v1 : ~60 cartes, les classiques 
 - **État** : `useState` (snapshot, batching, updater function), structure de l'état, lifting state up, préserver / réinitialiser l'état (reset par `key`), `useReducer`, Context.
 - **Effets & refs** : `useRef`, `useEffect` (deps, **cleanup**, StrictMode), « You might not need an effect », `useLayoutEffect`, `useEffectEvent`, custom hooks.
 - **Performance** : rendu et réconciliation, **`React.memo`**, `useMemo` / `useCallback`, **React Compiler** (et ses bail-outs), `lazy` + Suspense, `useTransition` / `useDeferredValue`, Profiler.
-- **React 19** : Actions, `useActionState`, `useFormStatus`, `useOptimistic`, `use()`, ref as a prop, `<Activity>`, metadata.
-- **Server** : Server Components, `'use client'` / `'use server'`, hydration.
+- **React 19** : Actions, `useActionState`, `useFormStatus`, `useOptimistic`, `use()`, ref as a prop, `<Activity>`, metadata ; 19.3 : `<ViewTransition>` et `addTransitionType`, Fragment Refs.
+- **Server** : Server Components, `'use client'` / `'use server'`, hydration ; 19.3 : `use(browser())` pour sortir du server rendering, `<Context>` rendu directement dans un Server Component.
 - **Patterns** : composition et `children`, contrôlé vs non contrôlé, error boundaries, portals.
 - **Tests** : principes de Testing Library.
 
@@ -103,6 +111,6 @@ L'appli est un moyen, pas le but : sortir le MVP en une ou deux sessions, puis e
 
 ## Prochaines étapes
 
-1. Deck React v1 (~60 cartes) dans `decks/react.json` + `decks/index.json`, révisable tout de suite via « interroge-moi ».
+1. Deck React v1 (~60 cartes) dans `public/decks/react.json`, révisable tout de suite via « interroge-moi ». Fait : module Effets & refs (12 cartes, 01/10/2026).
 2. MVP : moteur + écran « Aujourd'hui » + « Signaler une carte », publié en artefact.
 3. Compléter React, puis TanStack Query. Mode entretien et Progression dans l'appli quand je révise régulièrement.
