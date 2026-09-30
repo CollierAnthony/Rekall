@@ -1125,6 +1125,110 @@
         "url": "https://react.dev/reference/react-dom/createPortal"
       },
       "difficulty": 2
+    },
+    {
+      "id": "react.rsc.serverComponents",
+      "moduleId": "server",
+      "kind": "compare",
+      "question": "Qu'est-ce qu'un Server Component, et en quoi diffère-t-il d'un Client Component ?",
+      "answer": "Un Server Component est rendu à l'avance, avant le bundling, dans un environnement séparé de l'app client : une fois au build, ou à chaque requête sur un serveur. Il peut être async et lire directement des fichiers ou une base de données, et son code n'est pas envoyé au client, seulement son résultat. En contrepartie, pas d'interactivité, ni useState ni event handlers : pour ça, il importe des Client Components marqués 'use client'.",
+      "keyPoints": [
+        "Rendu avant le bundling, hors de l'app client (au build ou par requête)",
+        "Peut être async, lire fichiers et base de données directement",
+        "Aucun JS envoyé au client pour ce composant",
+        "Pas de state ni d'event handlers : composer avec des Client Components",
+        "Pas de directive pour les Server Components ; 'use server' sert aux Server Functions",
+        "Peut passer une Promise non attendue à un Client Component, qui la lit avec use"
+      ],
+      "source": {
+        "title": "Server Components – API Reference",
+        "url": "https://react.dev/reference/rsc/server-components"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.rsc.useClient",
+      "moduleId": "server",
+      "kind": "recall",
+      "question": "Que marque exactement la directive 'use client' ?",
+      "answer": "'use client' en tête de fichier marque ce module et toutes ses dépendances transitives comme du code client : c'est une frontière serveur-client dans l'arbre des dépendances de modules, pas dans l'arbre de rendu. Un composant est Client s'il est défini dans un tel module, ou importé et appelé depuis un Client Component ; sinon, c'est un Server Component. Les props qui traversent la frontière doivent être sérialisables : pas de fonctions, sauf les Server Functions, ni d'instances de classes.",
+      "keyPoints": [
+        "Tout en haut du fichier, avant les imports",
+        "Le module et ses dépendances transitives deviennent du code client",
+        "Frontière dans l'arbre des modules, pas dans l'arbre de rendu",
+        "Props serveur → client sérialisables : primitives, tableaux, Map, Set, Date, objets simples, JSX, Promises, Server Functions",
+        "Nécessaire pour useState, les event handlers, les API du navigateur",
+        "Les Client Components sont aussi pré-rendus côté serveur (SSR)"
+      ],
+      "source": {
+        "title": "'use client' – API Reference",
+        "url": "https://react.dev/reference/rsc/use-client"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.rsc.useServer",
+      "moduleId": "server",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'une Server Function ('use server'), et quelles précautions prendre ?",
+      "answer": "'use server', en tête d'une fonction async ou d'un fichier, marque des Server Functions : des fonctions exécutées sur le serveur mais appelables depuis le code client, par exemple via <form action> ou useActionState. Leurs arguments viennent entièrement du client : on les traite comme des entrées non fiables, on les valide, et on vérifie que l'utilisateur a le droit de faire l'action. Elles servent aux mutations, s'appellent dans une Transition, et ne sont pas recommandées pour récupérer des données.",
+      "keyPoints": [
+        "Fonctions async exécutées sur le serveur, appelables depuis le client",
+        "'use server' en tête de fonction ou de fichier (au niveau module pour les importer côté client)",
+        "Arguments et valeur de retour sérialisables",
+        "Arguments non fiables : valider, et vérifier l'autorisation",
+        "Pour les mutations, appelées dans une Transition ; pas pour le data fetching",
+        "'use server' ne marque pas les Server Components"
+      ],
+      "source": {
+        "title": "'use server' – API Reference",
+        "url": "https://react.dev/reference/rsc/use-server"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.hydration.mismatch",
+      "moduleId": "server",
+      "kind": "recall",
+      "question": "Qu'est-ce que l'hydration, et d'où viennent les hydration mismatches ?",
+      "answer": "L'hydration consiste à attacher React au HTML déjà généré par le serveur : avec hydrateRoot, React reprend la gestion du DOM existant et y branche les event handlers. Pour ça, le rendu côté client doit produire exactement le même résultat que côté serveur. Les écarts viennent le plus souvent de données différentes entre serveur et client, de tests typeof window ou d'API du navigateur dans la logique de rendu, ou d'espaces en trop autour du HTML racine ; React les traite comme des bugs à corriger.",
+      "keyPoints": [
+        "Hydration : React reprend le HTML rendu par le serveur et y attache les handlers (hydrateRoot)",
+        "Le rendu client doit produire la même sortie que le serveur",
+        "Causes : données différentes, typeof window, API navigateur (matchMedia) dans le rendu, espaces autour du HTML",
+        "Écart inévitable (ex. une date) : suppressHydrationWarning",
+        "Contenu volontairement différent : double rendu, avec un state isClient passé à true dans un effet"
+      ],
+      "pitfalls": [
+        "Le double rendu ralentit l'hydration : à réserver aux cas qui l'exigent"
+      ],
+      "source": {
+        "title": "hydrateRoot – API Reference",
+        "url": "https://react.dev/reference/react-dom/client/hydrateRoot"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.rsc.vsSsr",
+      "moduleId": "server",
+      "kind": "compare",
+      "question": "Quelle est la différence entre le SSR et les Server Components ?",
+      "answer": "Le SSR rend les composants en HTML sur le serveur pour un premier affichage rapide, puis le client charge le code de ces composants et hydrate ce HTML. Les Server Components, eux, sont rendus avant le bundling, dans un environnement séparé du client comme du serveur SSR, et leur code n'est jamais envoyé au client : seul leur résultat l'est. Les deux se combinent : les Client Components sont pré-rendus en HTML par le SSR, puis hydratés.",
+      "keyPoints": [
+        "SSR : HTML rendu sur le serveur, puis hydratation côté client avec le code des composants",
+        "Server Components : rendus avant le bundling, hors du client et du serveur SSR",
+        "Le code des Server Components n'est jamais envoyé au client",
+        "Complémentaires : les Client Components passent par le SSR puis l'hydratation",
+        "Server Components exécutables au build ou à chaque requête"
+      ],
+      "source": {
+        "title": "Server Components – API Reference",
+        "url": "https://react.dev/reference/rsc/server-components"
+      },
+      "difficulty": 3
     }
   ]
 }
