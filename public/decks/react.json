@@ -1,0 +1,298 @@
+{
+  "id": "react",
+  "title": "React",
+  "version": "19.3",
+  "modules": [
+    {
+      "id": "fundamentals",
+      "title": "Fondamentaux"
+    },
+    {
+      "id": "state",
+      "title": "État"
+    },
+    {
+      "id": "effects-refs",
+      "title": "Effets & refs"
+    },
+    {
+      "id": "performance",
+      "title": "Performance"
+    },
+    {
+      "id": "react-19",
+      "title": "React 19"
+    },
+    {
+      "id": "server",
+      "title": "Server"
+    },
+    {
+      "id": "patterns",
+      "title": "Patterns"
+    },
+    {
+      "id": "testing",
+      "title": "Tests"
+    }
+  ],
+  "cards": [
+    {
+      "id": "react.useEffect.purpose",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "À quoi sert useEffect ?",
+      "answer": "useEffect permet de synchroniser un composant avec un système externe à React : une API du navigateur, un widget tiers, le réseau, une connexion à un serveur. Son code s'exécute après le commit, une fois l'écran mis à jour, et non pendant le rendu. Un effet est causé par le rendu lui-même, pas par une interaction : sans système externe à synchroniser, on n'en a probablement pas besoin.",
+      "details": "La doc distingue trois types de code : le rendu (pur, il calcule le JSX), les event handlers (side effects causés par une interaction précise) et les effets (side effects causés par le rendu). Exemple : se connecter au serveur d'un chat est un effet, car ça doit arriver dès que le composant est affiché ; envoyer un message est un événement, causé par le clic sur le bouton.",
+      "keyPoints": [
+        "Synchroniser le composant avec un système externe (browser API, widget tiers, réseau)",
+        "S'exécute après le commit, pas pendant le render",
+        "Causé par le rendu lui-même, alors qu'un event handler est causé par une interaction précise",
+        "Escape hatch : pas de système externe, probablement pas d'effet"
+      ],
+      "source": {
+        "title": "Synchronizing with Effects",
+        "url": "https://react.dev/learn/synchronizing-with-effects"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.useEffect.cleanup",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "À quoi sert la fonction retournée par un useEffect ?",
+      "answer": "C'est la cleanup function : elle arrête ou annule ce que le setup a mis en place, par exemple fermer une connexion ou ignorer la réponse d'une requête en cours. React l'appelle avant chaque nouvelle exécution de l'effet, avec les anciennes props et l'ancien state, puis une dernière fois quand le composant est retiré (unmount).",
+      "details": "Déroulé complet : le setup tourne au montage ; après chaque commit où les dépendances ont changé, la cleanup tourne avec les anciennes valeurs puis le setup avec les nouvelles ; la cleanup tourne une dernière fois à l'unmount. Règle de la doc : l'utilisateur ne doit pas pouvoir distinguer un seul setup (production) de la séquence setup → cleanup → setup (développement).",
+      "keyPoints": [
+        "Arrête ou annule ce que fait le setup (connexion → déconnexion, requête → ignorer sa réponse)",
+        "Appelée avant chaque ré-exécution de l'effet, avec les anciennes valeurs",
+        "Appelée une dernière fois à l'unmount",
+        "En Strict Mode (dev), un cycle setup → cleanup supplémentaire vérifie que la cleanup est le miroir du setup"
+      ],
+      "pitfalls": [
+        "Si le cycle supplémentaire du Strict Mode cause un problème visible, c'est que la cleanup est incomplète"
+      ],
+      "source": {
+        "title": "useEffect – API Reference",
+        "url": "https://react.dev/reference/react/useEffect"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.useEffect.dependencies",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "Comment fonctionne le tableau de dépendances de useEffect ?",
+      "answer": "Il liste toutes les valeurs réactives lues par l'effet : props, state, variables et fonctions déclarées dans le composant. Après chaque commit, React compare chaque dépendance à sa valeur précédente avec Object.is et ne relance l'effet que si l'une d'elles a changé. Sans tableau, l'effet se relance après chaque commit ; avec un tableau vide, il ne tourne qu'au montage.",
+      "keyPoints": [
+        "Toutes les valeurs réactives lues dans l'effet : props, state, variables et fonctions du composant",
+        "Comparaison de chaque dépendance avec Object.is",
+        "Pas de tableau : après chaque commit ; [] : seulement au montage ; [a, b] : quand a ou b change",
+        "On ne choisit pas ses dépendances : le linter vérifie que chaque valeur réactive est déclarée",
+        "Nombre d'éléments constant, écrit inline : [dep1, dep2]"
+      ],
+      "pitfalls": [
+        "Un objet ou une fonction créé dans le composant change à chaque rendu et relance l'effet plus souvent que nécessaire"
+      ],
+      "source": {
+        "title": "useEffect – API Reference",
+        "url": "https://react.dev/reference/react/useEffect"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.useRef.vsState",
+      "moduleId": "effects-refs",
+      "kind": "compare",
+      "question": "Quelle est la différence entre useRef et useState ?",
+      "answer": "Les deux conservent une valeur entre les rendus, mais modifier ref.current ne déclenche pas de re-render, alors que le setter du state en déclenche un. Une ref est un objet mutable { current } qu'on modifie hors du rendu ; le state est traité comme immuable, et chaque rendu en voit un snapshot. On utilise une ref pour une valeur qui ne sert pas au calcul du JSX : un timeout ID, un nœud DOM, un objet externe.",
+      "details": "La doc note qu'en principe useRef pourrait être implémenté au-dessus de useState : const [ref] = useState({ current: initialValue }). React renvoie le même objet à chaque rendu, on ne fait que muter sa propriété current. Seule exception à la règle « pas de lecture ni d'écriture pendant le rendu » : l'initialisation paresseuse, if (!ref.current) ref.current = new Thing().",
+      "keyPoints": [
+        "Les deux persistent entre les re-renders",
+        "Changer ref.current ne re-render pas ; le setter du state déclenche un re-render",
+        "Ref mutable ; state « immuable », modifié via son setter, avec un snapshot par rendu",
+        "Ne pas lire ni écrire ref.current pendant le rendu ; le state se lit à tout moment",
+        "Ref pour ce qui ne sert pas au JSX : timeout IDs, nœuds DOM, objets externes"
+      ],
+      "source": {
+        "title": "Referencing Values with Refs",
+        "url": "https://react.dev/learn/referencing-values-with-refs"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.useRef.domNode",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "Comment accéder à un nœud DOM en React, et à quel moment la ref est-elle remplie ?",
+      "answer": "On crée une ref avec useRef(null) et on la passe dans l'attribut ref de l'élément JSX : React y place le nœud DOM. La ref est affectée pendant le commit, pas pendant le rendu, et repasse à null quand le nœud est retiré. On l'utilise donc dans un event handler, ou dans un effet s'il n'y a pas d'événement, pour des actions non destructives comme le focus, le scroll ou la mesure.",
+      "details": "Pour une liste de refs, on passe une fonction à l'attribut ref (ref callback) : React l'appelle avec le nœud, puis appelle la cleanup qu'elle retourne quand il faut vider la ref. Pour limiter ce qu'un composant expose, useImperativeHandle permet de n'exposer que certaines méthodes, par exemple focus().",
+      "keyPoints": [
+        "useRef(null) puis ref={myRef} sur l'élément JSX",
+        "React remplit ref.current pendant le commit ; null avant, et remis à null quand le nœud est retiré",
+        "Accès depuis un event handler, ou un effet faute d'événement",
+        "Usages : focus, scroll, mesure ; éviter de modifier le DOM géré par React",
+        "Un composant n'expose pas ses nœuds DOM par défaut : il reçoit ref comme une prop et la transmet"
+      ],
+      "pitfalls": [
+        "Modifier, ajouter ou retirer des enfants d'un nœud géré par React peut provoquer des incohérences ou des crashs"
+      ],
+      "source": {
+        "title": "Manipulating the DOM with Refs",
+        "url": "https://react.dev/learn/manipulating-the-dom-with-refs"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.useEffect.strictMode",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "Pourquoi un effet s'exécute-t-il deux fois au montage en développement ?",
+      "answer": "En Strict Mode et en développement uniquement, React remonte volontairement le composant, ce qui ajoute un cycle setup → cleanup avant le vrai setup. C'est un stress-test qui vérifie que la cleanup défait bien ce que fait le setup. La bonne question n'est pas « comment l'exécuter une seule fois », mais « comment corriger l'effet pour qu'il supporte un remontage » : en général, en écrivant la cleanup.",
+      "keyPoints": [
+        "Strict Mode, en dev uniquement : setup → cleanup → setup",
+        "Stress-test : la cleanup doit être le miroir du setup",
+        "L'utilisateur ne doit pas voir la différence entre un setup unique (prod) et setup → cleanup → setup (dev)",
+        "La solution est d'écrire la cleanup, pas d'empêcher la double exécution"
+      ],
+      "pitfalls": [
+        "Utiliser une ref pour empêcher le deuxième appel masque le bug au lieu de le corriger"
+      ],
+      "source": {
+        "title": "Synchronizing with Effects – How to handle the Effect firing twice in development?",
+        "url": "https://react.dev/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.effects.youMightNotNeedAnEffect",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "Dans quels cas n'a-t-on pas besoin d'un effet ?",
+      "answer": "Quand aucun système externe n'est en jeu. Deux cas typiques : transformer des données pour l'affichage, qu'on calcule directement pendant le rendu au lieu de les stocker dans un state via un effet ; et gérer une action de l'utilisateur, qui va dans l'event handler, le seul endroit où l'on sait ce qui s'est passé. Pour trancher, on se demande pourquoi le code doit tourner : un effet ne sert qu'au code qui s'exécute parce que le composant est affiché.",
+      "keyPoints": [
+        "Valeur calculable depuis les props ou le state : la calculer pendant le rendu, pas de state ni d'effet",
+        "Action de l'utilisateur (ex. POST d'achat) : dans l'event handler",
+        "Calcul coûteux : useMemo (ou React Compiler), pas useEffect",
+        "Réinitialiser tout le state quand une prop change : passer une key différente",
+        "Code exécuté parce que le composant est affiché : effet ; le reste : event handlers"
+      ],
+      "pitfalls": [
+        "Un effet qui met à jour le state juste après le rendu relance tout le cycle render → commit → effet : rendus en cascade inutiles"
+      ],
+      "source": {
+        "title": "You Might Not Need an Effect",
+        "url": "https://react.dev/learn/you-might-not-need-an-effect"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.useEffect.fetchRaceCondition",
+      "moduleId": "effects-refs",
+      "kind": "code",
+      "question": "Ce composant charge la bio d'une personne. Quel est le bug, et comment le corriger ?",
+      "code": "function Bio({ person }) {\n  const [bio, setBio] = useState(null);\n\n  useEffect(() => {\n    fetchBio(person).then(result => {\n      setBio(result);\n    });\n  }, [person]);\n\n  return <p>{bio ?? 'Chargement…'}</p>;\n}",
+      "answer": "C'est une race condition : si person change rapidement, les réponses réseau peuvent arriver dans un ordre différent de l'envoi, et une réponse périmée peut écraser la bonne. On la corrige avec une cleanup : une variable ignore initialisée à false dans le setup, passée à true dans la cleanup, et on n'appelle setBio que si ignore est toujours false.",
+      "details": "Version corrigée, tirée de la doc :\n\nuseEffect(() => {\n  let ignore = false;\n  setBio(null);\n  fetchBio(person).then(result => {\n    if (!ignore) {\n      setBio(result);\n    }\n  });\n  return () => {\n    ignore = true;\n  };\n}, [person]);",
+      "keyPoints": [
+        "Race condition : les réponses peuvent arriver dans le désordre",
+        "let ignore = false dans le setup",
+        "ignore = true dans la cleanup",
+        "setBio(result) seulement si !ignore"
+      ],
+      "source": {
+        "title": "useEffect – Fetching data with Effects",
+        "url": "https://react.dev/reference/react/useEffect#fetching-data-with-effects"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.useLayoutEffect.vsUseEffect",
+      "moduleId": "effects-refs",
+      "kind": "compare",
+      "question": "Quelle est la différence entre useLayoutEffect et useEffect, et quand utiliser useLayoutEffect ?",
+      "answer": "useLayoutEffect est une version de useEffect qui s'exécute avant que le navigateur ne repeigne l'écran. Il sert à mesurer le layout puis à re-rendre avant l'affichage, par exemple pour positionner un tooltip sans qu'on le voie bouger. Son code et les mises à jour de state qu'il déclenche bloquent le paint : il peut nuire aux performances, donc on préfère useEffect dès que possible.",
+      "keyPoints": [
+        "S'exécute avant le repaint du navigateur ; useEffect laisse en général le navigateur peindre d'abord",
+        "Cas d'usage : mesurer puis re-rendre avant l'affichage (tooltip), pour éviter le flicker",
+        "Bloque le paint : préférer useEffect quand c'est possible",
+        "Comme tout effet, ne tourne pas en server rendering, où il n'y a pas d'information de layout"
+      ],
+      "pitfalls": [
+        "Un setState dans useLayoutEffect fait exécuter immédiatement tous les effets restants, y compris les useEffect"
+      ],
+      "source": {
+        "title": "useLayoutEffect – API Reference",
+        "url": "https://react.dev/reference/react/useLayoutEffect"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.customHooks.sharedLogic",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'un custom hook ? Deux composants qui l'appellent partagent-ils le même state ?",
+      "answer": "Un custom hook est une fonction nommée use suivi d'une majuscule, qui appelle d'autres hooks pour extraire une logique réutilisable. Il partage de la logique avec state, pas le state lui-même : chaque appel est totalement indépendant et a son propre state. Pour partager un même state entre composants, on le remonte dans un parent commun (lifting state up) et on le transmet en props.",
+      "keyPoints": [
+        "Nom : use + majuscule (useOnlineStatus) ; une fonction qui n'appelle aucun hook ne prend pas le préfixe use",
+        "Partage la stateful logic, pas le state : chaque appel est indépendant",
+        "Partager le state lui-même : lifting state up",
+        "Se ré-exécute à chaque rendu du composant et doit rester pur",
+        "Bon candidat : encapsuler un effet de synchronisation avec un système externe"
+      ],
+      "pitfalls": [
+        "Éviter les hooks « lifecycle » génériques comme useMount : un custom hook doit avoir un objectif précis"
+      ],
+      "source": {
+        "title": "Reusing Logic with Custom Hooks",
+        "url": "https://react.dev/learn/reusing-logic-with-custom-hooks"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.useEffectEvent.purpose",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "À quoi sert useEffectEvent ?",
+      "answer": "Il sert à sortir d'un effet une logique non réactive, qui doit lire les dernières props et le dernier state sans relancer l'effet quand ils changent. Exemple : un chat se connecte à roomId et affiche une notification sauf si muted ; en lisant muted dans un Effect Event, activer ou couper les notifications ne reconnecte plus le chat. Un Effect Event ne se déclare pas dans les dépendances et ne s'appelle que depuis un effet.",
+      "details": "Exemple adapté de la doc :\n\nfunction ChatRoom({ roomId, muted }) {\n  const onConnected = useEffectEvent((roomId) => {\n    if (!muted) {\n      showNotification('Connected to ' + roomId);\n    }\n  });\n\n  useEffect(() => {\n    const connection = createConnection(roomId);\n    connection.on('connected', () => {\n      onConnected(roomId);\n    });\n    connection.connect();\n    return () => connection.disconnect();\n  }, [roomId]);\n}",
+      "keyPoints": [
+        "Sépare une logique non réactive (un « événement » déclenché depuis l'effet) de l'effet réactif",
+        "Lit toujours les dernières valeurs commitées, sans être une dépendance",
+        "Ne s'appelle que depuis un effet ou un autre Effect Event, jamais pendant le rendu",
+        "Ne se passe pas à d'autres composants ou hooks ; identité volontairement non stable"
+      ],
+      "pitfalls": [
+        "Ne pas l'utiliser pour éviter de déclarer une dépendance qui doit relancer l'effet : ça cache des bugs"
+      ],
+      "source": {
+        "title": "useEffectEvent – API Reference",
+        "url": "https://react.dev/reference/react/useEffectEvent"
+      },
+      "since": "React 19.2",
+      "difficulty": 3
+    },
+    {
+      "id": "react.useEffect.objectDependencies",
+      "moduleId": "effects-refs",
+      "kind": "recall",
+      "question": "Pourquoi un objet ou une fonction en dépendance peut-il relancer un effet à chaque rendu, et comment l'éviter ?",
+      "answer": "Un objet ou une fonction créé pendant le rendu est un nouvel objet à chaque rendu : Object.is le considère différent même si son contenu est identique, donc l'effet se resynchronise à chaque fois. On le sort du composant s'il est statique, on le crée dans l'effet s'il dépend des props ou du state, ou on ne dépend que de ses valeurs primitives. Les dépendances doivent correspondre au code : on modifie le code, jamais le linter.",
+      "keyPoints": [
+        "Nouvel objet ou nouvelle fonction à chaque rendu : Object.is renvoie false, l'effet se relance",
+        "Statique : le déplacer hors du composant",
+        "Dépend des props ou du state : le créer dans l'effet",
+        "Objet reçu en prop : déstructurer et dépendre des valeurs primitives",
+        "State lu pour calculer le suivant : updater function, ex. setMessages(msgs => [...msgs, message])"
+      ],
+      "pitfalls": [
+        "Désactiver le linter (eslint-disable) pour retirer une dépendance masque des bugs"
+      ],
+      "source": {
+        "title": "Removing Effect Dependencies",
+        "url": "https://react.dev/learn/removing-effect-dependencies"
+      },
+      "difficulty": 3
+    }
+  ]
+}
