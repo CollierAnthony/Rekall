@@ -115,6 +115,11 @@ Decks suivants : TanStack Query (query keys, `staleTime` vs `gcTime`, invalidati
 
 L'appli est un moyen, pas le but : sortir le MVP en une ou deux sessions, puis enrichir les decks au fil de l'eau, plutôt que de peaufiner l'outil au lieu de réviser.
 
+## À reprendre (retours du 01/10/2026)
+
+1. **Le terme « commit » dans les cartes** gêne Anthony (il l'associe à git). Proposition de Claude, à trancher : garder ce terme officiel de React (phases render puis commit), le définir entre parenthèses à sa première occurrence dans chaque carte, et ajouter une carte « render vs commit » au module Fondamentaux.
+2. **Intervalles des boutons de note** (1 min / 6 min / 10 min / 8 j sur une nouvelle carte) : ce sont les étapes d'apprentissage de FSRS (1 et 10 min), puis la révision espacée en jours ; Facile saute l'apprentissage. Options possibles : afficher « dans la session » pour les intervalles du jour, ou réduire les étapes d'apprentissage.
+
 ## Prochaines étapes
 
 1. ~~Deck React v1 (~60 cartes)~~ Fait le 01/10/2026 : 60 cartes dans `public/decks/react.json` (Effets & refs 12, Performance 9, État 9, Fondamentaux 8, React 19 9, Patterns 5, Server 5, Tests 3), révisables via « interroge-moi ».
