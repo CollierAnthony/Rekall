@@ -1025,6 +1025,106 @@
       },
       "since": "React 19.3",
       "difficulty": 3
+    },
+    {
+      "id": "react.forms.controlledVsUncontrolled",
+      "moduleId": "patterns",
+      "kind": "compare",
+      "question": "Quelle est la différence entre un input contrôlé et un input non contrôlé ?",
+      "answer": "Un input contrôlé reçoit sa valeur via value (ou checked), en général depuis un state mis à jour dans onChange : React force l'input à afficher exactement cette valeur, et le state est la source de vérité. Un input non contrôlé garde sa valeur dans le DOM : on ne donne qu'une valeur initiale avec defaultValue, et on la lit au besoin, via le formulaire ou une ref. Un input ne peut pas être les deux à la fois, ni passer de l'un à l'autre au cours de sa vie.",
+      "keyPoints": [
+        "Contrôlé : value + onChange, le state est la source de vérité",
+        "Non contrôlé : defaultValue, valeur gérée par le DOM, lue via le formulaire ou une ref",
+        "Ni les deux à la fois, ni de bascule au cours de sa vie",
+        "Plus largement : un composant est contrôlé quand son parent le pilote par des props"
+      ],
+      "pitfalls": [
+        "value sans onChange : impossible de taper, React ramène l'input à value à chaque frappe",
+        "value={undefined} puis une chaîne : bascule de non contrôlé à contrôlé ; écrire value={x ?? ''}"
+      ],
+      "source": {
+        "title": "<input> – API Reference",
+        "url": "https://react.dev/reference/react-dom/components/input"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "react.errorBoundaries",
+      "moduleId": "patterns",
+      "kind": "recall",
+      "question": "Que capture une Error Boundary, et que ne capture-t-elle pas ?",
+      "answer": "Une Error Boundary affiche une UI de repli à la place de la partie de l'arbre qui a planté : elle capture les erreurs levées pendant le rendu, dans les méthodes de cycle de vie et dans les constructeurs des composants en dessous. Elle ne capture pas les erreurs des event handlers, du code asynchrone comme setTimeout, du rendu serveur, ni celles levées dans la boundary elle-même. Il n'existe pas d'Error Boundary en function component : on écrit une classe, ou on utilise react-error-boundary.",
+      "keyPoints": [
+        "Capture : rendu, cycle de vie, constructeurs de l'arbre en dessous",
+        "Ne capture pas : event handlers, code asynchrone (setTimeout…), SSR, erreurs de la boundary elle-même",
+        "Exception : une erreur levée dans la fonction passée à startTransition est capturée",
+        "Classe uniquement : getDerivedStateFromError (afficher le fallback), componentDidCatch (logger)",
+        "Sans écrire de classe : react-error-boundary"
+      ],
+      "source": {
+        "title": "Component – Catching rendering errors with an Error Boundary",
+        "url": "https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.components.nestedDefinition",
+      "moduleId": "patterns",
+      "kind": "code",
+      "question": "Pourquoi le champ de saisie se vide-t-il à chaque clic sur le bouton ?",
+      "code": "export default function MyComponent() {\n  const [counter, setCounter] = useState(0);\n\n  function MyTextField() {\n    const [text, setText] = useState('');\n    return <input value={text} onChange={e => setText(e.target.value)} />;\n  }\n\n  return (\n    <>\n      <MyTextField />\n      <button onClick={() => setCounter(counter + 1)}>\n        Clicked {counter} times\n      </button>\n    </>\n  );\n}",
+      "answer": "Parce que MyTextField est déclaré à l'intérieur de MyComponent : à chaque rendu, une nouvelle fonction MyTextField est créée. Pour React, c'est un composant différent rendu à la même position, donc il réinitialise tout le state en dessous. La règle : toujours déclarer les composants au top level du module, jamais les uns dans les autres.",
+      "keyPoints": [
+        "Composant déclaré dans un autre : nouvelle fonction à chaque rendu",
+        "Autre type à la même position : React réinitialise le state du sous-arbre",
+        "Conséquences : state perdu et problèmes de performance",
+        "Toujours déclarer les composants au top level"
+      ],
+      "source": {
+        "title": "Preserving and Resetting State",
+        "url": "https://react.dev/learn/preserving-and-resetting-state"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.composition.children",
+      "moduleId": "patterns",
+      "kind": "recall",
+      "question": "Comment éviter le prop drilling sans recourir à Context ?",
+      "answer": "En extrayant des composants et en leur passant du JSX en children : un composant intermédiaire qui transmet des données sans les utiliser signale souvent un composant qu'on a oublié d'extraire. Au lieu de <Layout posts={posts} />, on écrit <Layout><Posts posts={posts} /></Layout> : Layout reçoit le contenu dans sa prop children et n'a plus besoin de connaître posts. On réduit ainsi le nombre de couches entre le composant qui fournit la donnée et celui qui l'utilise.",
+      "keyPoints": [
+        "Le contenu imbriqué dans une balise arrive dans la prop children",
+        "Composant intermédiaire qui ne fait que transmettre : extraire et passer du JSX",
+        "<Layout><Posts posts={posts} /></Layout> plutôt que <Layout posts={posts} />",
+        "Ordre conseillé : props, puis composition avec children, puis Context"
+      ],
+      "details": "C'est aussi un levier de performance cité dans la doc de memo : un composant qui enveloppe visuellement d'autres composants et les reçoit en children peut mettre à jour son propre state sans que React re-rende ces enfants.",
+      "source": {
+        "title": "Passing Data Deeply with Context",
+        "url": "https://react.dev/learn/passing-data-deeply-with-context"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "react.portals",
+      "moduleId": "patterns",
+      "kind": "recall",
+      "question": "À quoi sert un portal, et comment ses événements se propagent-ils ?",
+      "answer": "createPortal(children, domNode) rend des enfants dans un autre nœud du DOM, par exemple une modale attachée à document.body pour échapper à un overflow: hidden ou au z-index d'un conteneur. Le portal ne change que la position physique dans le DOM : pour tout le reste, son contenu reste un enfant du composant qui le rend, avec accès à son context. Ses événements remontent donc selon l'arbre React, pas l'arbre DOM : un onClick posé sur un parent React se déclenche pour un clic dans le portal.",
+      "keyPoints": [
+        "createPortal(children, domNode, key?) : rendu dans un autre nœud DOM déjà existant",
+        "Usages : modales, tooltips, overlays ; contenu React dans du HTML non React ou un widget tiers",
+        "Seule la position DOM change : context et state restent ceux de l'arbre React",
+        "Événements propagés selon l'arbre React, pas le DOM"
+      ],
+      "pitfalls": [
+        "Si cette propagation pose problème : stopper l'événement dans le portal, ou remonter le portal dans l'arbre React"
+      ],
+      "source": {
+        "title": "createPortal – API Reference",
+        "url": "https://react.dev/reference/react-dom/createPortal"
+      },
+      "difficulty": 2
     }
   ]
 }
