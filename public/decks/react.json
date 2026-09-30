@@ -38,6 +38,29 @@
   ],
   "cards": [
     {
+      "id": "react.rendering.renderAndCommit",
+      "moduleId": "fundamentals",
+      "kind": "recall",
+      "question": "Que désignent « render » et « commit » dans React ?",
+      "answer": "Ce sont les deux phases d'une mise à jour de l'écran, après le trigger, c'est-à-dire le rendu initial ou un changement de state. Pendant le render, React appelle tes composants pour calculer ce qui doit s'afficher, sans toucher au DOM : c'est pour ça que le rendu doit être pur. Pendant le commit, React applique au DOM uniquement les différences avec le rendu précédent ; ensuite le navigateur repeint l'écran.",
+      "details": "Analogie de la doc : les composants sont des cuisiniers et React le serveur. Le trigger, c'est la commande transmise en cuisine ; le render, la préparation du plat ; le commit, le plat posé sur la table. Au rendu initial, React insère tous les nœuds créés avec appendChild() ; aux rendus suivants, il n'applique que les opérations minimales calculées pendant le render. C'est pendant le commit que les refs reçoivent leurs nœuds DOM, et les effets s'exécutent après.",
+      "keyPoints": [
+        "Trois étapes : trigger, render, commit",
+        "Trigger : rendu initial, ou mise à jour du state du composant ou d'un ancêtre",
+        "Render : React appelle les composants et calcule le JSX, sans toucher au DOM ; il doit être pur",
+        "Commit : React applique au DOM uniquement les différences avec le rendu précédent",
+        "Ensuite le navigateur peint l'écran ; les refs sont remplies pendant le commit, les effets tournent après"
+      ],
+      "pitfalls": [
+        "Un re-render n'implique pas une mise à jour du DOM : si le résultat est identique, React ne touche à rien"
+      ],
+      "source": {
+        "title": "Render and Commit",
+        "url": "https://react.dev/learn/render-and-commit"
+      },
+      "difficulty": 1
+    },
+    {
       "id": "react.useEffect.purpose",
       "moduleId": "effects-refs",
       "kind": "recall",
