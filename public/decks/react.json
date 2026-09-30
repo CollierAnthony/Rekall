@@ -834,6 +834,197 @@
         "url": "https://react.dev/reference/react/Fragment"
       },
       "difficulty": 1
+    },
+    {
+      "id": "react.refAsProp.forwardRef",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "Pourquoi forwardRef n'est-il plus nécessaire en React 19 ?",
+      "answer": "Depuis React 19, un function component reçoit ref comme une prop ordinaire : il la récupère dans ses props et la passe à l'élément DOM voulu. forwardRef, qui servait à exposer un nœud DOM au parent, n'est donc plus nécessaire pour du nouveau code. React annonce qu'il sera déprécié puis retiré dans une version future, et fournit un codemod pour migrer.",
+      "code": "function MyInput({ placeholder, ref }) {\n  return <input placeholder={placeholder} ref={ref} />;\n}\n\n// <MyInput ref={ref} />",
+      "keyPoints": [
+        "React 19 : ref est une prop des function components",
+        "On la déstructure et on la passe à l'élément DOM ciblé",
+        "forwardRef n'est plus nécessaire pour du nouveau code",
+        "forwardRef sera déprécié dans une version future ; un codemod existe"
+      ],
+      "source": {
+        "title": "React v19 – ref as a prop",
+        "url": "https://react.dev/blog/2024/12/05/react-19#ref-as-a-prop"
+      },
+      "since": "React 19",
+      "difficulty": 1
+    },
+    {
+      "id": "react.actions.definition",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'une Action en React 19 ?",
+      "answer": "Par convention, une Action est une fonction qui utilise une transition asynchrone, c'est-à-dire une fonction, éventuellement async, appelée dans startTransition. React gère alors l'état pending, qui démarre avec la requête et se termine quand la dernière mise à jour est commitée, les mises à jour optimistes avec useOptimistic, et les erreurs, affichées par une Error Boundary avec retour automatique des valeurs optimistes. Les formulaires en profitent directement : on passe une fonction à la prop action d'un <form>, qui est réinitialisé après une soumission réussie.",
+      "keyPoints": [
+        "Action = fonction qui utilise une transition asynchrone (appelée dans startTransition)",
+        "État pending géré automatiquement",
+        "Mises à jour optimistes avec useOptimistic",
+        "Erreurs : Error Boundary, valeurs optimistes annulées",
+        "<form action={fn}> ou formAction : formulaire non contrôlé réinitialisé après succès",
+        "Convention de nommage : action, ou suffixe Action"
+      ],
+      "source": {
+        "title": "React v19 – Actions",
+        "url": "https://react.dev/blog/2024/12/05/react-19#actions"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.useActionState.purpose",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "À quoi sert useActionState ?",
+      "answer": "useActionState met à jour un state avec des side effects au moyen d'une Action : on lui passe une fonction, sync ou async, qui reçoit le state précédent et un payload, et une valeur initiale. Il renvoie [state, dispatchAction, isPending] : le dernier résultat de l'Action, la fonction à déclencher, et un booléen de chargement. On passe typiquement dispatchAction à <form action>, ou on l'appelle dans startTransition ; les appels successifs sont exécutés dans l'ordre, chacun avec le résultat du précédent.",
+      "keyPoints": [
+        "const [state, dispatchAction, isPending] = useActionState(reducerAction, initialState)",
+        "reducerAction(previousState, payload), sync ou async, peut faire des side effects",
+        "dispatchAction doit être appelé depuis une Action : <form action> ou startTransition",
+        "Appels mis en file et exécutés séquentiellement",
+        "Si l'Action lève une erreur : file annulée, Error Boundary la plus proche",
+        "Pattern courant : retourner { error } dans le state pour l'afficher"
+      ],
+      "source": {
+        "title": "useActionState – API Reference",
+        "url": "https://react.dev/reference/react/useActionState"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.useOptimistic.purpose",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "À quoi sert useOptimistic ?",
+      "answer": "useOptimistic affiche tout de suite le résultat attendu d'une mutation pendant que l'Action est en cours, par exemple un nom déjà mis à jour avant la réponse du serveur. Il renvoie [optimisticState, setOptimistic] : l'état optimiste vaut value tant qu'aucune Action n'est en cours, et on le modifie avec le setter à l'intérieur d'une Action. À la fin, il converge avec la vraie valeur ; en cas d'échec, l'UI revient à ce qu'elle affichait avant.",
+      "keyPoints": [
+        "const [optimisticState, setOptimistic] = useOptimistic(value, reducer?)",
+        "État optimiste rendu seulement pendant une Action ; sinon value",
+        "Le setter doit être appelé dans une Action (sinon warning)",
+        "Succès : converge avec la vraie valeur en un seul rendu",
+        "Échec : l'UI revient à l'état d'avant",
+        "Reducer optionnel pour calculer l'état optimiste (ex. ajouter un élément à une liste)"
+      ],
+      "source": {
+        "title": "useOptimistic – API Reference",
+        "url": "https://react.dev/reference/react/useOptimistic"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.use.purpose",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "À quoi sert use, et en quoi diffère-t-il des hooks ?",
+      "answer": "use lit une ressource pendant le rendu : la valeur d'une Promise ou d'un context. Contrairement aux hooks, on peut l'appeler dans une condition ou une boucle, mais pas dans un try/catch. Avec une Promise, le composant suspend jusqu'à la résolution, on l'entoure donc d'un <Suspense>, et un rejet remonte à l'Error Boundary la plus proche.",
+      "details": "Cas typique : un Server Component crée la Promise et la passe en prop à un Client Component, qui la lit avec use pour streamer les données ; la valeur résolue doit alors être sérialisable. Une Promise créée dans un Client Component serait recréée à chaque rendu : elle doit être mise en cache pour garder la même instance.",
+      "keyPoints": [
+        "Lit une Promise ou un context pendant le rendu",
+        "Appelable dans une condition ou une boucle, contrairement aux hooks et à useContext",
+        "Interdit dans un try/catch : utiliser une Error Boundary",
+        "Promise : le composant suspend, <Suspense fallback> au-dessus",
+        "La Promise doit être la même instance d'un rendu à l'autre (mise en cache)"
+      ],
+      "source": {
+        "title": "use – API Reference",
+        "url": "https://react.dev/reference/react/use"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.useFormStatus.purpose",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "À quoi sert useFormStatus, et quel est son piège principal ?",
+      "answer": "useFormStatus donne l'état de la dernière soumission du <form> parent : pending, data (un FormData), method et action. Il sert typiquement à un bouton de soumission réutilisable, qui se désactive pendant l'envoi sans qu'on lui passe de props. Piège : il ne lit que le formulaire parent, donc s'il est appelé dans le composant qui rend lui-même le <form>, pending ne vaut jamais true.",
+      "keyPoints": [
+        "Renvoie { pending, data, method, action } du <form> parent",
+        "Lit le formulaire parent comme s'il était un Context provider",
+        "Doit être appelé dans un composant rendu à l'intérieur du <form>",
+        "Cas d'usage : bouton Submit de design system, disabled={pending}",
+        "Importé depuis react-dom"
+      ],
+      "pitfalls": [
+        "Appelé dans le composant qui rend le <form>, il ne suit pas ce formulaire : pending reste false"
+      ],
+      "source": {
+        "title": "useFormStatus – API Reference",
+        "url": "https://react.dev/reference/react-dom/hooks/useFormStatus"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.documentMetadata",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "Comment gérer <title> et les balises <meta> en React 19 ?",
+      "answer": "Depuis React 19, on peut rendre <title>, <meta> et <link> directement dans n'importe quel composant : React les remonte automatiquement dans le <head> du document, où qu'ils soient rendus dans l'arbre. Pour <title>, les enfants doivent former une seule chaîne, par exemple {`Résultats page ${page}`}, et il ne faut en rendre qu'un à la fois.",
+      "keyPoints": [
+        "<title>, <meta> et <link> rendus dans un composant sont placés dans le <head>",
+        "<title> : une seule chaîne comme enfant ({`Résultats page ${page}`})",
+        "Un seul <title> rendu à la fois, sinon comportement indéfini",
+        "Pas de traitement spécial dans un <svg> ou avec itemProp"
+      ],
+      "pitfalls": [
+        "<title>Résultats page {page}</title> produit plusieurs enfants, pas une seule chaîne"
+      ],
+      "source": {
+        "title": "<title> – API Reference",
+        "url": "https://react.dev/reference/react-dom/components/title"
+      },
+      "since": "React 19",
+      "difficulty": 2
+    },
+    {
+      "id": "react.activity.purpose",
+      "moduleId": "react-19",
+      "kind": "compare",
+      "question": "À quoi sert <Activity>, et en quoi diffère-t-il d'un rendu conditionnel ?",
+      "answer": "<Activity mode=\"visible\" | \"hidden\"> permet de masquer puis de restaurer une partie de l'UI avec son state. En mode hidden, React masque les enfants avec display: none, détruit leurs effets, et continue de les re-rendre à plus basse priorité ; quand ils redeviennent visibles, leur state est restauré et leurs effets recréés. Un rendu conditionnel, lui, démonte le composant et perd son state.",
+      "keyPoints": [
+        "mode : 'visible' (par défaut) ou 'hidden'",
+        "Hidden : display: none, effets nettoyés, state conservé",
+        "Enfants cachés re-rendus à plus basse priorité",
+        "Retour à visible : state restauré, effets recréés",
+        "{cond && <Sidebar />} démonte le composant et perd son state",
+        "Autres usages : pré-rendre un contenu probable, hydratation sélective"
+      ],
+      "source": {
+        "title": "<Activity> – API Reference",
+        "url": "https://react.dev/reference/react/Activity"
+      },
+      "since": "React 19.2",
+      "difficulty": 3
+    },
+    {
+      "id": "react.viewTransition.purpose",
+      "moduleId": "react-19",
+      "kind": "recall",
+      "question": "À quoi sert <ViewTransition>, et quelles mises à jour déclenchent son animation ?",
+      "answer": "<ViewTransition> anime un arbre de composants en s'appuyant sur l'API View Transition du navigateur, que React appelle lui-même. Seules les mises à jour faites dans une Transition, dans un <Suspense> ou via useDeferredValue l'activent ; un setState classique s'applique immédiatement, sans animation. React choisit le type d'animation : enter à l'insertion, exit à la suppression, update quand le contenu change, et share entre deux ViewTransition de même name.",
+      "keyPoints": [
+        "S'appuie sur startViewTransition du navigateur, appelé par React (ne pas l'appeler soi-même)",
+        "Déclenchée par startTransition, Suspense ou useDeferredValue, pas par un setState classique",
+        "Types : enter, exit, update, share",
+        "name uniquement pour les shared element transitions",
+        "addTransitionType pour varier l'animation selon le type de transition",
+        "Anime une image du rendu (déplacement, échelle, fondu), pas chaque élément"
+      ],
+      "source": {
+        "title": "<ViewTransition> – API Reference",
+        "url": "https://react.dev/reference/react/ViewTransition"
+      },
+      "since": "React 19.3",
+      "difficulty": 3
     }
   ]
 }
