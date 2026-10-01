@@ -105,6 +105,12 @@ export function advanceTodayQueue(queue: TodayQueue, nextDueAt: Date, now: Date)
   };
 }
 
+/** Cartes revues depuis le début de la journée de révision : survit aux rechargements, contrairement au compteur de la session. */
+export function countReviewedToday(progressByCardId: ReadonlyMap<string, CardProgress>, now: Date): number {
+  const reviewDayStart = startOfReviewDay(now);
+  return [...progressByCardId.values()].filter((progress) => progress.lastReviewedAt >= reviewDayStart).length;
+}
+
 /** Nombre de cartes déjà vues à revoir demain, c'est-à-dire pendant la journée de révision suivante (de 4 h à 4 h). */
 export function countDueTomorrow(progressByCardId: ReadonlyMap<string, CardProgress>, now: Date): number {
   const nextReviewDayStart = startOfNextReviewDay(now);

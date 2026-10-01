@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, CardDifficulty, Deck } from './deck';
 import type { CardProgress } from './review';
-import { advanceTodayQueue, composeTodayQueue, countDueTomorrow, startOfNextReviewDay, startOfReviewDay } from './today-queue';
+import { advanceTodayQueue, composeTodayQueue, countDueTomorrow, countReviewedToday, startOfNextReviewDay, startOfReviewDay } from './today-queue';
 
 // Dates locales : la journée de révision commence à 4 h dans le fuseau du navigateur.
 const now = new Date(2026, 9, 1, 9, 0);
@@ -207,5 +207,19 @@ describe('countDueTomorrow', () => {
     );
 
     expect(count).toBe(3);
+  });
+});
+
+describe('countReviewedToday', () => {
+  it('compte les cartes revues depuis 4 h, pas celles revues la veille au soir', () => {
+    const [lastEvening, thisMorning, now9am] = [aCard('a'), aCard('b'), aCard('c')];
+    const reviewedAt = (card: Card, when: Date): CardProgress => ({ ...aProgress(card, at(5, 9)), lastReviewedAt: when });
+
+    const count = countReviewedToday(
+      progressMap(reviewedAt(lastEvening, september(30, 23)), reviewedAt(thisMorning, at(1, 4)), reviewedAt(now9am, at(1, 9))),
+      now,
+    );
+
+    expect(count).toBe(2);
   });
 });

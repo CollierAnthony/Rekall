@@ -27,6 +27,11 @@ export function formatInterval(from: Date, to: Date): string {
   return years === 1 ? '1 an' : `${years} ans`;
 }
 
+/** Domaine d'une source, sans « www. » : « react.dev », « developer.mozilla.org ». */
+export function formatSourceHost(url: string): string {
+  return new URL(url).hostname.replace(/^www\./, '');
+}
+
 const dayFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 export function formatDay(date: Date): string {

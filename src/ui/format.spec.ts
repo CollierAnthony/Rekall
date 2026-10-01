@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDueLabel, formatInterval } from './format';
+import { formatDueLabel, formatInterval, formatSourceHost } from './format';
 
 const from = new Date('2026-10-01T08:00:00Z');
 const after = (milliseconds: number): Date => new Date(from.getTime() + milliseconds);
@@ -31,5 +31,12 @@ describe('formatDueLabel', () => {
 
   it('annonce le délai pour une carte qui revient un autre jour', () => {
     expect(formatDueLabel(reviewedAt, new Date(2026, 9, 9, 23, 50))).toBe('dans 8 j');
+  });
+});
+
+describe('formatSourceHost', () => {
+  it('garde le domaine sans « www. »', () => {
+    expect(formatSourceHost('https://developer.mozilla.org/en-US/docs/Web/JavaScript')).toBe('developer.mozilla.org');
+    expect(formatSourceHost('https://www.typescriptlang.org/docs/')).toBe('typescriptlang.org');
   });
 });

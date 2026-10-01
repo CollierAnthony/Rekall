@@ -1,5 +1,10 @@
 import type { Deck } from '../../domain/deck';
-import type { CardContext } from './ReviewCard';
+
+/** Où se range une carte : affiché au-dessus de la question. */
+export type CardContext = {
+  readonly deckTitle: string;
+  readonly moduleTitle: string;
+};
 
 /** Deck et module de chaque carte, pour les afficher au-dessus de la question. */
 export function buildCardContexts(decks: readonly Deck[]): ReadonlyMap<string, CardContext> {

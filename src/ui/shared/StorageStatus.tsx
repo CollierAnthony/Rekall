@@ -11,8 +11,8 @@ const LABELS: Readonly<Record<StorageMode, { readonly text: string; readonly tit
 export function StorageStatus({ mode }: { readonly mode: StorageMode }) {
   const label = LABELS[mode];
   return (
-    <p className={`storage storage--${mode}`} title={label.title}>
-      <span className="storage__dot" aria-hidden="true" />
+    <p className={`sync-pill sync-pill--${mode}`} title={label.title}>
+      <span className="sync-pill__dot" aria-hidden="true" />
       {label.text}
     </p>
   );
