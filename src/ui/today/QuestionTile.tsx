@@ -1,13 +1,6 @@
-import type { Card, CardKind } from '../../domain/deck';
+import type { Card } from '../../domain/deck';
+import { DifficultyDots, KIND_LABELS } from '../shared/card-labels';
 import type { CardContext } from './card-contexts';
-
-const KIND_LABELS: Readonly<Record<CardKind, string>> = {
-  recall: 'Rappel',
-  compare: 'Comparaison',
-  code: 'Code',
-};
-
-const DIFFICULTY_LABELS = { 1: 'Facile', 2: 'Intermédiaire', 3: 'Avancé' } as const;
 
 type QuestionTileProps = {
   readonly card: Card;
@@ -30,13 +23,8 @@ export function QuestionTile({ card, context, size, tone = 'review' }: QuestionT
         </span>
         <span className="question-tile__chips">
           <span className="chip">{KIND_LABELS[card.kind]}</span>
-          <span className="chip" title={`Difficulté ${card.difficulty} sur 3`}>
-            <span className="difficulty" aria-hidden="true">
-              {([1, 2, 3] as const).map((level) => (
-                <span key={level} className={level <= card.difficulty ? 'difficulty__dot difficulty__dot--on' : 'difficulty__dot'} />
-              ))}
-            </span>
-            <span className="visually-hidden">{DIFFICULTY_LABELS[card.difficulty]}</span>
+          <span className="chip">
+            <DifficultyDots level={card.difficulty} />
           </span>
           {card.since !== undefined && <span className="chip">{card.since}</span>}
           {card.deprecated !== undefined && (

@@ -35,7 +35,7 @@ export function HomeScreen({ reviewDay, storageMode, today, interviewUnlocked, s
           <p className="home__date">{formatDay(reviewDay)}</p>
           <StorageStatus mode={storageMode} />
         </div>
-        <h1 className="home__title">Aujourd’hui</h1>
+        <h1 className="page-title">Aujourd’hui</h1>
       </header>
 
       <div className="home__grid">
