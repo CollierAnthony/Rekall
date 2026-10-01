@@ -125,7 +125,14 @@ Maquette : artefact Design « Rekall — Refonte UX/UI », page Studio (directio
 - **Accueil** : session du jour (nombre de cartes, à revoir / nouvelles, Commencer ou Reprendre), tuile Entretien (verrouillée : progression vers les 20 cartes vues), Demain, Catégories (cartes vues par deck).
 - **Mode focus** pour la session et l'entretien : pas de navigation, une croix pour sortir (Échap sur ordinateur), compteur et barre d'avancement. Notation fixée en bas de l'écran sur téléphone ; sur ordinateur, deux colonnes (réponse à gauche, points clés et notation à droite) et raccourcis Espace, 1 à 4, Échap.
 - **Signalement** : feuille modale (`<dialog>` natif), depuis le drapeau de l'en-tête ou le lien en bas de la réponse.
-- **Navigation basse** (Aujourd'hui, Bibliothèque, Pratique, Guides) : pas encore affichée ; elle apparaîtra avec la Bibliothèque, chaque onglet seulement quand sa section existe.
+- **Navigation** : barre flottante en bas sur téléphone, colonne latérale avec le nom de l'appli sur ordinateur. Un onglet n'apparaît que quand sa section existe (aujourd'hui : Aujourd'hui, Bibliothèque). Les écrans en mode focus (session, entretien, fiche) s'ouvrent par-dessus les onglets ; le bouton retour du navigateur les referme (une entrée d'historique par écran ouvert). Les onglets restent montés dans des `<Activity>` masquées : chaque onglet garde son état et sa position de défilement.
+
+### Bibliothèque (01/10/2026)
+
+- Toutes les cartes, par catégorie (filtres « Tout » + un par deck, tirés de l'index) puis par module repliable (« 9 cartes · 6 vues »).
+- Recherche dans tous les champs de la carte, sans casse ni accents, tous les mots requis ; les cartes dont la question correspond passent en tête (`src/domain/card-search.ts`).
+- Statut de chaque carte : Nouvelle, À revoir (due dans la journée de révision), Dans N j (`src/domain/card-status.ts`).
+- Fiche : question, révisions, prochaine échéance, niveau, réponse, points clés, pièges, pour creuser, source, signalement. Rien à noter : la bibliothèque ne touche pas à la répétition espacée.
 - À décider plus tard : une couleur par catégorie (champ `color` dans le deck), coloration syntaxique du code.
 
 ## Programme React (deck 1)
@@ -166,4 +173,4 @@ Retours de la première utilisation, traités :
 3. ~~Mode entretien dans l'appli.~~ Fait le 01/10/2026.
 4. ~~Refonte UX/UI : maquette dans Claude Design, puis implémentation.~~ Faite le 01/10/2026 (voir Refonte Studio).
 5. ~~Deck JavaScript~~ fait le 01/10/2026 : 60 cartes, 8 modules, sources MDN, ES2026. Puis deck TypeScript.
-6. Section Bibliothèque (avec la navigation basse), puis Pratique et Guides.
+6. ~~Section Bibliothèque (avec la navigation)~~ faite le 01/10/2026 (version 7 de l'artefact). Puis Pratique et Guides.
