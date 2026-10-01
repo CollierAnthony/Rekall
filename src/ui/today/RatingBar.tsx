@@ -1,5 +1,5 @@
 import { RATINGS, type Rating } from '../../domain/review';
-import { formatInterval } from '../format';
+import { formatDueLabel } from '../format';
 
 const RATING_LABELS: Readonly<Record<Rating, string>> = {
   again: 'Raté',
@@ -32,7 +32,7 @@ export function RatingBar({ revealedAt, dueDates, isSaving, onRate }: RatingBarP
             aria-keyshortcuts={String(index + 1)}
           >
             <span className="rating__label">{RATING_LABELS[rating]}</span>
-            <span className="rating__interval">{formatInterval(revealedAt, dueDates[rating])}</span>
+            <span className="rating__interval">{formatDueLabel(revealedAt, dueDates[rating])}</span>
             <kbd className="rating__key">{index + 1}</kbd>
           </button>
         ))}

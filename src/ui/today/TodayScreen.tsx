@@ -2,11 +2,13 @@ import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
 import type { TodayReview, TodaySnapshot } from '../../application/today-review';
 import type { StorageMode } from '../../composition-root';
 import { RATINGS, type Rating } from '../../domain/review';
+import { startOfReviewDay } from '../../domain/today-queue';
 import { formatDay } from '../format';
 import { ReviewCard, type CardContext } from './ReviewCard';
 import { SessionProgress } from './SessionProgress';
 import { SessionSummary } from './SessionSummary';
 import { StorageStatus } from './StorageStatus';
+import { useReloadOnNewReviewDay } from './useReloadOnNewReviewDay';
 import { useTodaySession } from './useTodaySession';
 
 type TodayScreenProps = {
@@ -21,6 +23,7 @@ const RATING_BY_KEY: Readonly<Record<string, Rating>> = Object.fromEntries(RATIN
 
 export function TodayScreen({ todayReview, storageMode, snapshot, loadedAt, newCardsPerDay }: TodayScreenProps) {
   const session = useTodaySession(todayReview, snapshot, loadedAt);
+  useReloadOnNewReviewDay(loadedAt);
   const cardTopRef = useRef<HTMLDivElement>(null);
 
   const cardContexts = useMemo(
@@ -77,7 +80,7 @@ export function TodayScreen({ todayReview, storageMode, snapshot, loadedAt, newC
     <main className="today">
       <header className="today__header">
         <div>
-          <p className="today__date">{formatDay(loadedAt)}</p>
+          <p className="today__date">{formatDay(startOfReviewDay(loadedAt))}</p>
           <h1 className="today__title">Aujourd’hui</h1>
         </div>
         <StorageStatus mode={storageMode} />
