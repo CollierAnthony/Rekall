@@ -49,7 +49,7 @@ Le contenu est séparé du moteur. Ajouter une techno = ajouter un fichier de de
 - **Progression** : par carte, stockée dans `db` (échéance, stabilité, difficulté FSRS, révisions, oublis), clé = `id` de la carte. Chemin : `data/users/<id>/progress/cards/<cardId>` (privé par utilisateur ; `data/users/me/...` avec ArtifactData). L'état FSRS est opaque pour le domaine (`schedulerState`).
 - **Signalements** : collection partagée `reports` (`cardId`, `reason` wrong | unclear | other, `comment`, `reportedAt`), lue par Claude pour corriger les cartes.
 - **Sans base** (dev local, déconnecté) : mêmes données dans le localStorage, l'écran affiche « Sur cet appareil ».
-- **Nouvelles cartes** : 10 par jour, par difficulté croissante puis dans l'ordre du fichier.
+- **Nouvelles cartes** : 15 par jour, deck par deck, puis par difficulté croissante et dans l'ordre du fichier.
 - **Journée de révision** : commence à 4 h, heure locale (`REVIEW_DAY_START_HOUR`, comme Anki) ; une révision faite avant 4 h compte pour la veille. Au retour sur la page un autre jour de révision, la session se recharge.
 - **Nom de l'appli** : Rekall (titre de la page et de l'icône d'écran d'accueil). Usage mobile : ouvrir le lien dans le navigateur connecté à claude.ai et l'ajouter à l'écran d'accueil ; l'appli mobile Claude ne liste pas ce type d'artefact (bug connu).
 - **UI** : ne dépend que du format des cartes.
@@ -117,6 +117,17 @@ Règle de contenu : les cartes sont écrites **à partir des vraies pages de doc
 3. **Mode entretien** (fait le 01/10/2026) : onglet caché qui apparaît à partir de 20 cartes vues (`INTERVIEW_UNLOCK_THRESHOLD`). 5 questions au hasard parmi les cartes déjà vues, chrono de 60 s, réponse à l'oral, puis je tape ou dicte (dictée du clavier du téléphone) l'essentiel. Claude corrige via la capacité `sample` (port `AnswerGrader`, adaptateur `ClaudeAnswerGrader`) : points couverts, points manqués, commentaire, réponse modèle de 30 s. Sans Claude : grille des points clés à cocher. N'a aucun effet sur la répétition espacée, rien n'est stocké.
 4. **Progression** (après le MVP) : taux de rétention par module, liste des points faibles à retravailler.
 
+### Refonte Studio (01/10/2026)
+
+Maquette : artefact Design « Rekall — Refonte UX/UI », page Studio (directions A Bristol et B Nocturne écartées, gardées sur une page à part). Implémentée et publiée (version 6 de l'artefact).
+
+- **Look** : grands chiffres, tuiles franches, Bricolage Grotesque (titres), Atkinson Hyperlegible Next (texte), JetBrains Mono (code). Accent bleu = révision, orange = entretien. Thème clair et sombre suivant le système.
+- **Accueil** : session du jour (nombre de cartes, à revoir / nouvelles, Commencer ou Reprendre), tuile Entretien (verrouillée : progression vers les 20 cartes vues), Demain, Catégories (cartes vues par deck).
+- **Mode focus** pour la session et l'entretien : pas de navigation, une croix pour sortir (Échap sur ordinateur), compteur et barre d'avancement. Notation fixée en bas de l'écran sur téléphone ; sur ordinateur, deux colonnes (réponse à gauche, points clés et notation à droite) et raccourcis Espace, 1 à 4, Échap.
+- **Signalement** : feuille modale (`<dialog>` natif), depuis le drapeau de l'en-tête ou le lien en bas de la réponse.
+- **Navigation basse** (Aujourd'hui, Bibliothèque, Pratique, Guides) : pas encore affichée ; elle apparaîtra avec la Bibliothèque, chaque onglet seulement quand sa section existe.
+- À décider plus tard : une couleur par catégorie (champ `color` dans le deck), coloration syntaxique du code.
+
 ## Programme React (deck 1)
 
 Estimation : 150 à 200 cartes au total. **Deck v1 : ~60 cartes, les classiques d'entretien en priorité.**
@@ -132,10 +143,10 @@ Estimation : 150 à 200 cartes au total. **Deck v1 : ~60 cartes, les classiques 
 
 Decks suivants (décidé le 01/10/2026) : les bases avant les librairies annexes. **JavaScript** (source MDN), puis **TypeScript** (typescriptlang.org), puis **Node**. Ensuite NestJS, Next.js, tests, architecture ; TanStack, React Hook Form, Zod, Zustand passent après.
 
-Quand un deuxième deck arrive :
-- les nouvelles cartes sont introduites deck par deck (ordre de l'index, puis difficulté, puis ordre du fichier) ;
+Plusieurs decks (en place depuis le 01/10/2026) :
+- les nouvelles cartes sont introduites deck par deck (ordre de l'index, puis difficulté, puis ordre du fichier) : JavaScript commence quand React est entièrement vu ;
 - la progression d'une carte qui n'existe plus n'est plus comptée (cartes vues, échéances de demain) ;
-- le quota de nouvelles cartes par jour peut monter (~15).
+- quota : 15 nouvelles cartes par jour.
 
 ## Garde-fou
 
@@ -153,6 +164,6 @@ Retours de la première utilisation, traités :
 1. ~~Deck React v1 (~60 cartes)~~ Fait le 01/10/2026 : 60 cartes dans `public/decks/react.json` (Effets & refs 12, Performance 9, État 9, Fondamentaux 8, React 19 9, Patterns 5, Server 5, Tests 3), révisables via « interroge-moi ».
 2. ~~MVP : moteur + écran « Aujourd'hui » + « Signaler une carte », publié en artefact.~~ Fait le 01/10/2026.
 3. ~~Mode entretien dans l'appli.~~ Fait le 01/10/2026.
-4. Refonte UX/UI : maquette dans Claude Design, puis implémentation (navigation basse, écrans existants).
-5. Deck JavaScript, puis deck TypeScript.
-6. Section Bibliothèque, puis Pratique et Guides.
+4. ~~Refonte UX/UI : maquette dans Claude Design, puis implémentation.~~ Faite le 01/10/2026 (voir Refonte Studio).
+5. ~~Deck JavaScript~~ fait le 01/10/2026 : 60 cartes, 8 modules, sources MDN, ES2026. Puis deck TypeScript.
+6. Section Bibliothèque (avec la navigation basse), puis Pratique et Guides.
