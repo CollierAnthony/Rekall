@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Card, CardDifficulty } from './deck';
+import type { Card, CardDifficulty, Deck } from './deck';
 import type { CardProgress } from './review';
 import { advanceTodayQueue, composeTodayQueue, countDueTomorrow, startOfNextReviewDay, startOfReviewDay } from './today-queue';
 
@@ -29,6 +29,9 @@ const aProgress = (card: Card, dueAt: Date, introducedAt: Date = september(20)):
   schedulerState: {},
 });
 
+const aDeck = (id: string, cards: readonly Card[]): Deck => ({ id, title: id, version: '1', modules: [], cards });
+const oneDeck = (cards: readonly Card[]): Deck[] => [aDeck('react', cards)];
+
 const progressMap = (...progress: CardProgress[]): Map<string, CardProgress> => new Map(progress.map((p) => [p.cardId, p]));
 const ids = (cards: readonly Card[]): string[] => cards.map((card) => card.id);
 
@@ -54,7 +57,7 @@ describe('composeTodayQueue', () => {
     const [dueLate, dueEarly, dueTonight, unseen] = [aCard('a'), aCard('b'), aCard('c'), aCard('d')];
 
     const queue = composeTodayQueue(
-      [dueLate, dueEarly, dueTonight, unseen],
+      oneDeck([dueLate, dueEarly, dueTonight, unseen]),
       progressMap(aProgress(dueLate, september(30)), aProgress(dueEarly, september(28)), aProgress(dueTonight, at(1, 22))),
       now,
       { newCardsPerDay: 10 },
@@ -67,7 +70,7 @@ describe('composeTodayQueue', () => {
     const [midnight, nextReviewDay] = [aCard('midnight'), aCard('next-review-day')];
 
     const queue = composeTodayQueue(
-      [midnight, nextReviewDay],
+      oneDeck([midnight, nextReviewDay]),
       progressMap(aProgress(midnight, at(2, 0)), aProgress(nextReviewDay, at(2, 4))),
       now,
       { newCardsPerDay: 10 },
@@ -79,7 +82,7 @@ describe('composeTodayQueue', () => {
   it('inclut une carte due à 3 h du matin quand on révise la veille au soir', () => {
     const dueAt3am = aCard('due-at-3am');
 
-    const queue = composeTodayQueue([dueAt3am], progressMap(aProgress(dueAt3am, at(2, 3))), at(1, 21), { newCardsPerDay: 10 });
+    const queue = composeTodayQueue(oneDeck([dueAt3am]), progressMap(aProgress(dueAt3am, at(2, 3))), at(1, 21), { newCardsPerDay: 10 });
 
     expect(ids(queue.pending)).toEqual(['react.due-at-3am']);
   });
@@ -89,7 +92,7 @@ describe('composeTodayQueue', () => {
     const unseen = [aCard('n1'), aCard('n2'), aCard('n3')];
 
     const queue = composeTodayQueue(
-      [introducedThisMorning, ...unseen],
+      oneDeck([introducedThisMorning, ...unseen]),
       progressMap(aProgress(introducedThisMorning, at(5, 9), at(1, 8))),
       now,
       { newCardsPerDay: 3 },
@@ -103,7 +106,7 @@ describe('composeTodayQueue', () => {
     const unseen = [aCard('n1'), aCard('n2')];
 
     const queue = composeTodayQueue(
-      [introducedAt1am, ...unseen],
+      oneDeck([introducedAt1am, ...unseen]),
       progressMap(aProgress(introducedAt1am, at(5, 9), at(1, 1))),
       now,
       { newCardsPerDay: 2 },
@@ -117,7 +120,7 @@ describe('composeTodayQueue', () => {
     const unseen = [aCard('n1'), aCard('n2')];
 
     const queue = composeTodayQueue(
-      [introducedLastEvening, ...unseen],
+      oneDeck([introducedLastEvening, ...unseen]),
       progressMap(aProgress(introducedLastEvening, at(5, 9), september(30, 22))),
       at(1, 1),
       { newCardsPerDay: 2 },
@@ -126,12 +129,31 @@ describe('composeTodayQueue', () => {
     expect(ids(queue.pending)).toEqual(['react.n1']);
   });
 
-  it('présente les nouvelles cartes par difficulté, puis dans l’ordre du deck', () => {
+  it('présente les nouvelles cartes d’un deck par difficulté, puis dans l’ordre du fichier', () => {
     const cards = [aCard('hard', 3), aCard('easy1', 1), aCard('medium', 2), aCard('easy2', 1)];
 
-    const queue = composeTodayQueue(cards, new Map(), now, { newCardsPerDay: 10 });
+    const queue = composeTodayQueue(oneDeck(cards), new Map(), now, { newCardsPerDay: 10 });
 
     expect(ids(queue.pending)).toEqual(['react.easy1', 'react.easy2', 'react.medium', 'react.hard']);
+  });
+
+  it('introduit les nouvelles cartes deck par deck, dans l’ordre de l’index', () => {
+    const javascriptCard = { ...aCard('easy', 1), id: 'javascript.easy' };
+    const decks = [aDeck('react', [aCard('hard', 3), aCard('easy', 1)]), aDeck('javascript', [javascriptCard])];
+
+    const queue = composeTodayQueue(decks, new Map(), now, { newCardsPerDay: 10 });
+
+    expect(ids(queue.pending)).toEqual(['react.easy', 'react.hard', 'javascript.easy']);
+  });
+
+  it('ne passe au deck suivant que lorsque le précédent est entièrement vu', () => {
+    const [seenReact, unseenReact] = [aCard('seen'), aCard('unseen', 3)];
+    const javascriptCard = { ...aCard('easy', 1), id: 'javascript.easy' };
+    const decks = [aDeck('react', [seenReact, unseenReact]), aDeck('javascript', [javascriptCard])];
+
+    const queue = composeTodayQueue(decks, progressMap(aProgress(seenReact, at(5, 9))), now, { newCardsPerDay: 1 });
+
+    expect(ids(queue.pending)).toEqual(['react.unseen']);
   });
 });
 

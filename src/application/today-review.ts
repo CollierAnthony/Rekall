@@ -35,11 +35,15 @@ export class TodayReview {
     const { deckSource, progressRepository, policy } = this.#dependencies;
     const [decks, progressList] = await Promise.all([deckSource.loadAll(), progressRepository.loadAll()]);
     const cards = decks.flatMap((deck) => deck.cards);
-    const progressByCardId = new Map(progressList.map((progress) => [progress.cardId, progress]));
+    const cardIds = new Set(cards.map((card) => card.id));
+    // La progression d'une carte retirée d'un deck reste stockée, mais n'est plus comptée nulle part.
+    const progressByCardId = new Map(
+      progressList.filter((progress) => cardIds.has(progress.cardId)).map((progress) => [progress.cardId, progress]),
+    );
 
     return {
       decks,
-      queue: composeTodayQueue(cards, progressByCardId, now, policy),
+      queue: composeTodayQueue(decks, progressByCardId, now, policy),
       progressByCardId,
       dueTomorrow: countDueTomorrow(progressByCardId, now),
       unseenCount: cards.filter((card) => !progressByCardId.has(card.id)).length,

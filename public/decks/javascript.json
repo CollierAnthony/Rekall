@@ -1,0 +1,1429 @@
+{
+  "id": "javascript",
+  "title": "JavaScript",
+  "version": "ES2026",
+  "modules": [
+    {
+      "id": "types",
+      "title": "Types & égalité"
+    },
+    {
+      "id": "scope",
+      "title": "Portée & closures"
+    },
+    {
+      "id": "functions",
+      "title": "this & fonctions"
+    },
+    {
+      "id": "objects",
+      "title": "Objets, prototypes & classes"
+    },
+    {
+      "id": "async",
+      "title": "Asynchrone & event loop"
+    },
+    {
+      "id": "collections",
+      "title": "Collections & itération"
+    },
+    {
+      "id": "modules",
+      "title": "Modules"
+    },
+    {
+      "id": "dom",
+      "title": "DOM & événements"
+    }
+  ],
+  "cards": [
+    {
+      "id": "javascript.types.primitivesVsObjects",
+      "moduleId": "types",
+      "kind": "recall",
+      "question": "Quels sont les types primitifs de JavaScript, et qu'est-ce qui n'en est pas un ?",
+      "answer": "Il y a 7 types primitifs : null, undefined, boolean, number, bigint, string et symbol. Leurs valeurs sont immutables et représentées directement au plus bas niveau du langage. Tout le reste est un Object, y compris les fonctions, qui sont des objets callable (qu'on peut appeler) ; les objets sont d'ailleurs les seules valeurs mutables du langage.",
+      "details": "Sauf null et undefined, chaque primitive a un objet wrapper (Boolean, Number, BigInt, String, Symbol) qui fournit des méthodes. Quand on lit une propriété sur une primitive, JavaScript l'enveloppe automatiquement dans ce wrapper (auto-boxing) et lit la propriété sur l'objet. Lire une propriété de null ou undefined lève en revanche une TypeError, d'où l'intérêt de l'optional chaining (?.).\n\nJavaScript est dynamiquement typé (une variable n'est liée à aucun type et peut recevoir des valeurs de tous types) et faiblement typé : quand une opération mélange des types, il fait une conversion implicite au lieu de lever une erreur.",
+      "keyPoints": [
+        "7 primitifs : null, undefined, boolean, number, bigint, string, symbol",
+        "Les primitives sont immutables ; les objets sont les seules valeurs mutables",
+        "Tout ce qui n'est pas primitif est un Object, fonctions comprises (objets callable)",
+        "Sauf null et undefined, chaque primitive a un wrapper (Number, String…) qui lui prête ses méthodes par auto-boxing"
+      ],
+      "pitfalls": [
+        "typeof null renvoie \"object\" alors que null est un primitif : on teste null avec === null"
+      ],
+      "source": {
+        "title": "JavaScript data types and data structures",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Data_structures"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.types.typeofQuirks",
+      "moduleId": "types",
+      "kind": "recall",
+      "question": "Que renvoie typeof null, et quels autres résultats de typeof sont surprenants ?",
+      "answer": "typeof null renvoie \"object\" : dans la première implémentation, null, le pointeur NULL, partageait le type tag (étiquette de type interne) 0 des objets, et le correctif proposé a été rejeté. Autres surprises : fonctions et classes donnent \"function\", mais tableaux et wrappers créés avec new, comme new String(), donnent \"object\". Et typeof sur une variable non déclarée renvoie \"undefined\" sans erreur, mais lève une ReferenceError sur un let ou un const encore dans sa temporal dead zone (avant sa ligne de déclaration).",
+      "details": "Tableau officiel : Undefined → \"undefined\", Null → \"object\", Boolean → \"boolean\", Number → \"number\", BigInt → \"bigint\", String → \"string\", Symbol → \"symbol\", Function (tout objet qui implémente [[Call]], classes comprises) → \"function\", tout autre objet → \"object\".\n\nCas exotique : document.all, objet non standard exposé par tous les navigateurs actuels, renvoie \"undefined\". C'est une violation volontaire du standard (« willful violation ») pour la compatibilité web.",
+      "keyPoints": [
+        "typeof null === \"object\" : bug historique (même type tag que les objets), jamais corrigé",
+        "Fonctions et classes → \"function\"",
+        "Tableaux → \"object\" (utiliser Array.isArray pour les distinguer)",
+        "new String(…), new Number(…) → \"object\", pas le type primitif",
+        "Variable non déclarée → \"undefined\" ; let/const/class dans leur TDZ → ReferenceError"
+      ],
+      "pitfalls": [
+        "typeof x === \"object\" est aussi vrai pour null : un test « est-ce un objet ? » doit exclure null à part"
+      ],
+      "source": {
+        "title": "typeof",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.equality.strictVsLoose",
+      "moduleId": "types",
+      "kind": "compare",
+      "question": "Quelle différence entre == et === ? Lequel utiliser ?",
+      "answer": "=== compare sans aucune conversion : si les types diffèrent, le résultat est false. == fait d'abord une coercion (conversion implicite de type) : une string comparée à un number est convertie en number, un booléen devient 0 ou 1, un objet est converti en primitive, et null n'est égal qu'à null ou undefined. On privilégie === dans la plupart des cas, car son résultat est plus facile à prédire.",
+      "details": "Algorithme de == : même type → comparaison directe (deux objets ne sont égaux que s'ils référencent le même objet) ; null ou undefined d'un côté → true seulement si l'autre est aussi null ou undefined ; objet contre primitive → l'objet est converti en primitive ; puis un boolean est converti en number, et une string comparée à un number est convertie en number (un échec donne NaN, donc false). Conséquence de la règle sur null : x == null attrape à la fois null et undefined.\n\nLes méthodes natives n'utilisent pas toutes la même égalité : indexOf, lastIndexOf et les case d'un switch utilisent ===, alors que includes et les clés de Map et Set utilisent SameValueZero (comme === mais NaN est égal à NaN). Object.is, enfin, est comme === sauf que NaN est égal à NaN et que +0 et -0 sont distincts.",
+      "keyPoints": [
+        "=== : aucune conversion, types différents → false",
+        "== : coercion avant comparaison (string → number, boolean → 0/1, objet → primitive)",
+        "null == undefined est true, mais null et undefined ne sont égaux (==) à rien d'autre",
+        "Les deux considèrent NaN différent de lui-même et +0 égal à -0",
+        "Par défaut, utiliser === : plus prévisible"
+      ],
+      "pitfalls": [
+        "0 == \"0\" et 0 == new String(\"0\") valent true, alors que les mêmes comparaisons avec === valent false"
+      ],
+      "source": {
+        "title": "Equality comparisons and sameness",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.types.valueVsReference",
+      "moduleId": "types",
+      "kind": "code",
+      "question": "Qu'affiche ce code, et pourquoi car ne vaut-il pas null après l'appel ?",
+      "code": "function update(obj, n) {\n  obj.brand = \"Toyota\";\n  obj = null;\n  n = 42;\n}\n\nconst car = { brand: \"Honda\" };\nlet count = 1;\nupdate(car, count);\nconsole.log(car.brand);\nconsole.log(count);",
+      "answer": "Il affiche \"Toyota\" puis 1. En JavaScript, les arguments sont toujours passés par valeur, jamais par référence : réaffecter un paramètre, comme obj = null ou n = 42, ne change rien à l'extérieur de la fonction. Pour un objet, la valeur passée est une référence partagée (passed by sharing : la fonction reçoit une copie de la référence vers le même objet), donc muter ses propriétés, comme obj.brand, est visible par l'appelant.",
+      "details": "count est une primitive : la fonction reçoit la valeur 1, et n = 42 ne modifie que sa variable locale. car n'est pas copié : obj et car désignent le même objet tant que obj n'est pas réaffecté. obj = null fait seulement pointer la variable locale obj ailleurs ; car, lui, désigne toujours l'objet muté.",
+      "keyPoints": [
+        "Sortie : \"Toyota\" puis 1",
+        "Arguments toujours passés par valeur, jamais par référence",
+        "Réaffecter un paramètre (obj = null, n = 42) n'affecte pas la variable de l'appelant",
+        "Objet passé « by sharing » : muter une propriété est visible à l'extérieur"
+      ],
+      "pitfalls": [
+        "Croire que obj = null dans la fonction met aussi car à null"
+      ],
+      "source": {
+        "title": "Functions – Passing arguments",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions#passing_arguments"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.types.falsyValues",
+      "moduleId": "types",
+      "kind": "recall",
+      "question": "Quelles sont les valeurs falsy en JavaScript ?",
+      "answer": "Une valeur falsy est une valeur considérée comme false dans un contexte booléen, comme un if ou une boucle, où JavaScript convertit implicitement n'importe quelle valeur en boolean. Il y en a peu : false, null, undefined, NaN, 0, -0, 0n et la chaîne vide. Tous les objets sont truthy, à une exception près : document.all, le seul objet falsy du langage.",
+      "details": "Les variantes d'écriture comptent aussi : 0.0, 0x0, -0.0, 0x0n, '' ou `` (template literal vide). Il n'existe pas de -0n : la négation de 0n est 0n.\n\nnull et undefined sont en plus les deux valeurs nullish.",
+      "keyPoints": [
+        "false, null, undefined",
+        "Les zéros : 0, -0 et 0n (BigInt)",
+        "NaN et la chaîne vide \"\"",
+        "Tous les objets sont truthy, sauf document.all"
+      ],
+      "pitfalls": [
+        "&& renvoie la valeur falsy elle-même, pas false : 0 && \"dog\" vaut 0"
+      ],
+      "source": {
+        "title": "Falsy",
+        "url": "https://developer.mozilla.org/en-US/docs/Glossary/Falsy"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.types.nullVsUndefined",
+      "moduleId": "types",
+      "kind": "compare",
+      "question": "Quelle différence entre null et undefined ?",
+      "answer": "Ce sont les deux valeurs nullish de JavaScript et leur différence sémantique est mince : undefined représente l'absence de valeur, null l'absence d'objet, par exemple à la fin de la prototype chain ou en retour de querySelector quand rien ne correspond. Techniquement, null est un mot-clé littéral, alors qu'undefined est une variable globale. Ils sont égaux avec == mais pas avec ===, et typeof null renvoie \"object\" alors que typeof undefined renvoie \"undefined\".",
+      "details": "Points communs : les deux sont falsy et nullish (ils déclenchent ?? et ?.), et lire une propriété de l'un ou de l'autre lève une TypeError au lieu de renvoyer undefined.\n\nConseil de la page pour concevoir une API : accepter null et undefined comme des entrées équivalentes, car beaucoup de codebases ont leurs propres règles sur quand utiliser l'un ou l'autre.",
+      "keyPoints": [
+        "undefined = absence de valeur ; null = absence d'objet",
+        "null est un mot-clé littéral, undefined une variable globale",
+        "null == undefined → true ; null === undefined → false",
+        "typeof null → \"object\" (bug historique) ; typeof undefined → \"undefined\"",
+        "Les deux sont falsy et nullish ; lire une propriété dessus lève une TypeError"
+      ],
+      "pitfalls": [
+        "Ils divergent en arithmétique : 1 + null n'est pas NaN, 1 + undefined l'est",
+        "JSON.stringify représente null fidèlement, pas undefined"
+      ],
+      "source": {
+        "title": "null",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/null"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.types.nan",
+      "moduleId": "types",
+      "kind": "recall",
+      "question": "Pourquoi NaN !== NaN, et comment tester correctement si une valeur est NaN ?",
+      "answer": "Le comportement de NaN vient de la norme IEEE 754 des nombres flottants : NaN est différent de toute valeur, lui-même compris, avec == comme avec ===. Pour le tester, on utilise Number.isNaN(x), qui ne renvoie true que si x vaut déjà NaN, ou le test x !== x, vrai uniquement pour NaN. Le isNaN() global, lui, convertit d'abord son argument en number, donc isNaN(\"hello world\") renvoie true.",
+      "details": "Opérations qui produisent NaN : conversion numérique ratée (parseInt(\"blabla\"), Number(undefined)), résultat non réel (Math.sqrt(-1)), forme indéterminée (0 * Infinity), opérande qui est ou devient NaN (7 * \"blabla\" : NaN est contagieux), valeur invalide représentée en nombre (new Date(\"blabla\").getTime()).\n\nNaN se propage dans les calculs : il suffit souvent de le tester une fois à la fin. Seule exception : NaN ** 0 vaut 1. NaN est aussi falsy, et toute comparaison <, >, <= ou >= avec NaN renvoie false.\n\nObject.is(x, NaN) renvoie true pour un NaN, même de représentation binaire différente. Côté tableaux, indexOf ne trouve pas NaN mais includes le trouve.",
+      "keyPoints": [
+        "IEEE 754 : NaN n'est égal à rien, pas même à lui-même (== et ===)",
+        "Number.isNaN(x) : true seulement si x vaut déjà NaN, sans coercion",
+        "isNaN(x) global : convertit d'abord en number (isNaN(\"hello world\") → true)",
+        "x !== x n'est vrai que pour NaN ; Object.is(x, NaN) est aussi true",
+        "indexOf ne trouve pas NaN, includes le trouve"
+      ],
+      "pitfalls": [
+        "isNaN(1n) lève une TypeError (conversion BigInt → number impossible), alors que Number.isNaN(1n) renvoie false"
+      ],
+      "source": {
+        "title": "NaN",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.operators.nullishVsOr",
+      "moduleId": "types",
+      "kind": "compare",
+      "question": "Quelle différence entre ?? et || pour fournir une valeur par défaut, et comment ?? se combine-t-il avec ?. ?",
+      "answer": "|| renvoie l'opérande de droite dès que celle de gauche est falsy, alors que le nullish coalescing (??) ne le fait que si elle vaut null ou undefined. Avec ||, des valeurs valides comme 0, la chaîne vide ou NaN sont donc remplacées par la valeur par défaut. On le combine souvent avec l'optional chaining (?.) pour lire sans risque une propriété d'un objet qui peut être null ou undefined, avec une valeur par défaut si elle est nullish.",
+      "details": "Exemple adapté de la page :\n\nconst count = 0;\nconst text = \"\";\nconsole.log(count || 42); // 42\nconsole.log(count ?? 42); // 0\nconsole.log(text || \"hi!\"); // \"hi!\"\nconsole.log(text ?? \"hi!\"); // \"\"\nconst foo = { someFooProp: \"hi\" };\nconsole.log(foo.someBarProp?.toUpperCase() ?? \"not available\");\n// \"not available\"\n\nComme || et &&, ?? court-circuite (short-circuit : l'opérande de droite n'est pas évaluée si celle de gauche n'est ni null ni undefined). Sa précédence est juste en dessous de ||.",
+      "keyPoints": [
+        "|| : remplace toute valeur falsy (0, '', NaN, false…)",
+        "?? : remplace seulement null et undefined",
+        "count || 42 donne 42 si count vaut 0 ; count ?? 42 garde 0",
+        "Les deux court-circuitent : la droite n'est évaluée que si nécessaire",
+        "Combinaison classique : obj?.prop ?? valeurParDéfaut"
+      ],
+      "pitfalls": [
+        "Mélanger ?? avec || ou && sans parenthèses lève une SyntaxError : écrire (a || b) ?? c"
+      ],
+      "source": {
+        "title": "Nullish coalescing operator (??)",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.scope.varLetConst",
+      "moduleId": "scope",
+      "kind": "compare",
+      "question": "Quelles différences entre var, let et const ?",
+      "answer": "var a une portée de fonction (ou globale) et ignore les blocs, alors que let et const ont une portée de bloc. Un var est hoisted (sa déclaration remonte en haut de son scope) et vaut undefined avant sa ligne, alors que lire un let ou un const trop tôt lève une ReferenceError, à cause de la temporal dead zone. const doit être initialisée et ne peut être ni réaffectée ni redéclarée, mais l'objet ou le tableau qu'elle désigne reste mutable.",
+      "details": "Exemples de la page :\n\nif (true) {\n  var x = 5;\n}\nconsole.log(x); // 5\nif (Math.random() > 0.5) {\n  const y = 5;\n}\nconsole.log(y); // ReferenceError: y is not defined\nconst MY_ARRAY = [\"HTML\", \"CSS\"];\nMY_ARRAY.push(\"JAVASCRIPT\"); // OK : mutation\n\nOn ne peut pas non plus déclarer une const avec le même nom qu'une fonction ou une variable du même scope : c'est une erreur.",
+      "keyPoints": [
+        "var : portée de fonction ou globale, pas de bloc (un var déclaré dans un if reste visible après)",
+        "let et const : portée de bloc",
+        "var lu avant sa déclaration → undefined ; let/const → ReferenceError (TDZ)",
+        "const : initialisation obligatoire, ni réaffectation ni redéclaration",
+        "const fige le binding (le lien nom → valeur), pas la valeur : objet et tableau restent mutables"
+      ],
+      "pitfalls": [
+        "Croire qu'un objet ou un tableau déclaré en const est immutable : MY_OBJECT.key = \"otherValue\" passe sans erreur"
+      ],
+      "source": {
+        "title": "Grammar and types – Declarations",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types#declarations"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.scope.hoisting",
+      "moduleId": "scope",
+      "kind": "recall",
+      "question": "Qu'est-ce que le hoisting, et comment s'applique-t-il aux function declarations, à var, let, const et class ?",
+      "answer": "Le hoisting, c'est le fait que l'interpréteur semble déplacer les déclarations en haut de leur scope avant d'exécuter le code. Une function declaration est hissée avec sa valeur, donc appelable avant sa ligne ; un var n'est hissé que comme déclaration et vaut undefined jusqu'à son affectation. let, const et class réservent leur nom dans tout leur scope, mais la temporal dead zone (du début du bloc jusqu'à la déclaration) interdit d'y accéder avant, avec une ReferenceError : beaucoup les disent donc non hoisted.",
+      "details": "La page distingue quatre comportements : (1) value hoisting, utiliser la valeur avant la ligne de déclaration ; (2) declaration hoisting, référencer la variable sans ReferenceError mais avec la valeur undefined ; (3) la déclaration change le comportement de son scope avant sa ligne ; (4) les effets de bord de la déclaration ont lieu avant le reste du code. Function declarations → 1, var → 2, let/const/class → 3, import → 1 et 4.\n\nPreuve que let et const sont tout de même « un peu » hissés :\n\nconst x = 1;\n{\n  console.log(x); // ReferenceError\n  const x = 2;\n}\n\nSi le const x du bloc n'était pas hissé du tout, console.log lirait le x extérieur. Il lit au contraire le x du bloc, pas encore initialisé.",
+      "keyPoints": [
+        "Les déclarations semblent remontées en haut de leur scope avant l'exécution",
+        "Function declaration : valeur hissée, appelable avant sa ligne",
+        "var : seule la déclaration est hissée, valeur undefined avant l'affectation",
+        "let/const/class : nom réservé dans tout le scope, mais accès interdit avant la déclaration (TDZ → ReferenceError)"
+      ],
+      "pitfalls": [
+        "Un var déclaré dans un bloc et lu après le bloc, ce n'est pas du hoisting : c'est que var ignore la portée de bloc"
+      ],
+      "source": {
+        "title": "Hoisting",
+        "url": "https://developer.mozilla.org/en-US/docs/Glossary/Hoisting"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.scope.functionDeclarationVsExpression",
+      "moduleId": "scope",
+      "kind": "compare",
+      "question": "Quelle différence entre une function declaration et une function expression ?",
+      "answer": "La syntaxe est presque la même, mais une function expression peut être anonyme et s'utilise comme une valeur, par exemple assignée à une variable ou exécutée immédiatement en IIFE (fonction appelée dès sa définition). Surtout, une function declaration est hoisted et peut être appelée avant sa ligne, alors qu'une function expression ne l'est pas : avec var, la variable vaut undefined avant l'affectation et l'appel lève une TypeError. Si on nomme une function expression, ce nom n'est visible que dans son propre corps, ce qui permet la récursion.",
+      "details": "Exemple de la page :\n\nconsole.log(notHoisted); // undefined\nnotHoisted(); // TypeError: notHoisted is not a function\nvar notHoisted = function () {\n  console.log(\"bar\");\n};\n\nUne named function expression donne aussi son nom à la propriété name, à la place du nom déduit de la variable. Contrairement au nom d'une déclaration, ce nom est en lecture seule : l'affecter dans le corps de la fonction lève une TypeError en strict mode.",
+      "keyPoints": [
+        "Expression : nom facultatif (fonction anonyme), utilisable comme valeur ou en IIFE",
+        "Declaration : hoisted, appelable avant sa définition",
+        "Expression non hoisted : var f = function… → f vaut undefined avant, f() lève une TypeError",
+        "Nom d'une named function expression : local à son corps, en lecture seule, utile pour la récursion"
+      ],
+      "pitfalls": [
+        "Pour la récursion, nommer la function expression plutôt qu'utiliser arguments.callee, déprécié"
+      ],
+      "source": {
+        "title": "function expression",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/function"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.closures.definition",
+      "moduleId": "scope",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'une closure ?",
+      "answer": "Une closure, c'est la combinaison d'une fonction et de références vers son état environnant, son lexical environment (les variables en scope à l'endroit où la fonction est déclarée). Concrètement, une fonction garde l'accès aux variables de son scope extérieur, même après que la fonction qui les déclarait a fini de s'exécuter. En JavaScript, une closure est créée à chaque création de fonction.",
+      "details": "Exemple de la page, une function factory :\n\nfunction makeAdder(x) {\n  return function (y) {\n    return x + y;\n  };\n}\nconst add5 = makeAdder(5);\nconst add10 = makeAdder(10);\nconsole.log(add5(2)); // 7\nconsole.log(add10(2)); // 12\n\nadd5 et add10 partagent le même corps de fonction mais stockent des lexical environments différents : x vaut 5 dans l'un, 10 dans l'autre. Une closure a accès à toute la chaîne des scopes : local, fonctions englobantes et global.",
+      "keyPoints": [
+        "Fonction + référence à son lexical environment",
+        "Accès aux variables du scope extérieur, même après la fin de la fonction externe",
+        "Créée à chaque création de fonction",
+        "Lexical scoping : c'est l'endroit où la variable est déclarée dans le code source qui détermine où elle est accessible",
+        "Chaque appel de la fonction externe crée un environnement distinct (add5 et add10)"
+      ],
+      "pitfalls": [
+        "Créer des fonctions imbriquées sans avoir besoin de closure coûte en vitesse et en mémoire : par exemple, définir les méthodes sur le prototype plutôt que dans le constructeur"
+      ],
+      "source": {
+        "title": "Closures",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.closures.loopWithVar",
+      "moduleId": "scope",
+      "kind": "code",
+      "question": "Qu'affiche ce code ? Comment le corriger ?",
+      "code": "function setupHelp() {\n  var texts = [\"email\", \"name\", \"age\"];\n  var callbacks = [];\n  for (var i = 0; i < texts.length; i++) {\n    var item = texts[i];\n    callbacks.push(function () {\n      console.log(item);\n    });\n  }\n  return callbacks;\n}\n\nsetupHelp().forEach((cb) => cb());",
+      "answer": "Il affiche \"age\" trois fois. Les trois fonctions sont des closures qui partagent un seul et même lexical environment (l'ensemble des variables en scope qu'elles capturent), car item est déclaré avec var et a donc une portée de fonction ; quand les callbacks s'exécutent, la boucle est terminée et item désigne le dernier élément. La correction la plus simple est de déclarer item avec const ou let : chaque itération a alors sa propre variable de bloc, capturée par sa closure.",
+      "details": "Correction tirée de la page :\n\nfor (let i = 0; i < texts.length; i++) {\n  const item = texts[i];\n  callbacks.push(() => console.log(item));\n}\n\nAutres corrections proposées : une function factory (fonction qui fabrique et renvoie le callback) qui crée un nouvel environnement par callback, une IIFE (fonction exécutée dès sa définition) dans le corps de la boucle, ou une boucle for...of / forEach avec item en const. Dans l'exemple MDN d'origine, les callbacks sont des handlers onfocus sur trois champs : quel que soit le champ qui reçoit le focus, c'est l'aide sur l'âge qui s'affiche.",
+      "keyPoints": [
+        "Sortie : \"age\" trois fois",
+        "var item a une portée de fonction : une seule variable partagée par les 3 closures",
+        "La valeur est lue quand le callback s'exécute, après la fin de la boucle",
+        "Correction : const/let (une variable de bloc par itération), ou for...of / forEach",
+        "Correction historique : function factory ou IIFE, qui créent un environnement par callback"
+      ],
+      "pitfalls": [
+        "Passer seulement i en let ne suffit pas ici : c'est le var item qui est partagé"
+      ],
+      "source": {
+        "title": "Closures – Creating closures in loops: A common mistake",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#creating_closures_in_loops_a_common_mistake"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.scope.temporalDeadZone",
+      "moduleId": "scope",
+      "kind": "code",
+      "question": "Qu'affiche ce code, ligne par ligne ?",
+      "code": "{\n  const read = () => x;\n  console.log(v);\n  var v = 1;\n  let x = 2;\n  console.log(read());\n  console.log(typeof z);\n  console.log(typeof y);\n  let y = 3;\n}",
+      "answer": "Il affiche undefined, puis 2, puis \"undefined\", puis lève une ReferenceError. v est un var, donc lisible avant sa déclaration avec la valeur undefined, et read lit x mais n'est appelée qu'après la ligne let x, donc hors de la temporal dead zone (zone qui va du début du bloc jusqu'à la déclaration). typeof z renvoie \"undefined\" car z n'est pas déclarée, alors que typeof y lève une ReferenceError car y est déclarée plus bas dans le bloc et encore dans sa TDZ.",
+      "details": "La TDZ concerne let, const et class : du début du bloc jusqu'à ce que l'exécution atteigne la déclaration, la variable n'est pas initialisée et tout accès lève une ReferenceError (« Cannot access 'y' before initialization »). Un let sans valeur initiale est initialisé à undefined quand sa ligne est atteinte.\n\nLe mot « temporal » vient de là : la zone dépend de l'ordre d'exécution, pas de la position dans le code. read est écrite avant let x, mais appelée après : c'est ce qui compte.",
+      "keyPoints": [
+        "Sortie : undefined, 2, \"undefined\", puis ReferenceError",
+        "var lu avant sa déclaration : undefined, pas d'erreur",
+        "La TDZ dépend de l'ordre d'exécution, pas de la position dans le code : read() appelée après let x fonctionne",
+        "typeof d'une variable non déclarée → \"undefined\" ; typeof d'une variable en TDZ → ReferenceError"
+      ],
+      "pitfalls": [
+        "Croire que typeof ne lève jamais d'erreur : il en lève une sur un let ou un const encore en TDZ"
+      ],
+      "source": {
+        "title": "let – Temporal dead zone (TDZ)",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let#temporal_dead_zone_tdz"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.closures.privateState",
+      "moduleId": "scope",
+      "kind": "code",
+      "question": "Qu'affichent les trois console.log ?",
+      "code": "function makeCounter() {\n  let privateCounter = 0;\n  return {\n    increment() { privateCounter += 1; },\n    value() { return privateCounter; },\n  };\n}\nconst counter1 = makeCounter();\nconst counter2 = makeCounter();\ncounter1.increment();\ncounter1.increment();\nconsole.log(counter1.value());\nconsole.log(counter2.value());\nconsole.log(counter1.privateCounter);",
+      "answer": "Il affiche 2, 0, puis undefined. Chaque appel à makeCounter crée un nouveau lexical environment (l'ensemble des variables capturées par les fonctions créées pendant cet appel), donc counter1 et counter2 ont chacun leur propre privateCounter, et incrémenter l'un ne touche pas l'autre. privateCounter n'est pas une propriété de l'objet retourné mais une variable capturée par les closures increment et value : on ne peut y accéder que par ces méthodes publiques, c'est ainsi que les closures émulent un état privé (module pattern).",
+      "details": "Variante de la page avec une IIFE (fonction exécutée dès sa définition), qui crée un compteur unique dont les méthodes partagent le même environnement :\n\nconst counter = (function () {\n  let privateCounter = 0;\n  function changeBy(val) {\n    privateCounter += val;\n  }\n  return {\n    increment() { changeBy(1); },\n    value() { return privateCounter; },\n  };\n})();\n\nAvant les classes, JavaScript n'avait pas de moyen natif de déclarer des méthodes privées : les closures permettaient de les émuler, avec les bénéfices de la programmation objet que sont le data hiding et l'encapsulation.",
+      "keyPoints": [
+        "Sortie : 2, 0, undefined",
+        "Chaque appel de la factory crée un lexical environment indépendant",
+        "privateCounter est inaccessible de l'extérieur, seulement via les méthodes retournées",
+        "Les méthodes d'un même objet partagent le même environnement",
+        "C'est le module pattern : data hiding et encapsulation par closure"
+      ],
+      "source": {
+        "title": "Closures – Emulating private methods with closures",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures#emulating_private_methods_with_closures"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.scope.strictMode",
+      "moduleId": "scope",
+      "kind": "recall",
+      "question": "Que change concrètement le strict mode, et où est-il activé d'office ?",
+      "answer": "Le strict mode est une variante restreinte de JavaScript, par opposition au sloppy mode (le mode par défaut), qu'on active avec la directive \"use strict\" placée avant toute autre instruction d'un script ou d'une fonction. Il transforme des erreurs silencieuses en exceptions, par exemple assigner une variable non déclarée lève une ReferenceError au lieu de créer une globale, et dans une fonction appelée sans this, this vaut undefined au lieu de l'objet global. Il est activé d'office dans les modules JavaScript et dans tout le corps des classes.",
+      "details": "Les trois familles de changements selon la page : transformer des erreurs silencieuses en erreurs levées, corriger ce qui gêne les optimisations des moteurs (le code strict peut parfois tourner plus vite), et interdire une syntaxe susceptible d'être définie dans de futures versions d'ECMAScript.\n\nAutres changements : affecter une propriété non writable ou sans setter, ajouter une propriété à un objet non extensible ou poser une propriété sur une primitive (false.true = \"\") lèvent une TypeError ; delete sur une propriété non supprimable aussi. Les paramètres en double et with sont des erreurs de syntaxe, arguments n'est plus synchronisé avec les paramètres nommés, et arguments.callee lève une erreur.",
+      "keyPoints": [
+        "Activation : \"use strict\" avant toute autre instruction d'un script ou d'une fonction",
+        "Automatique dans les modules et dans le corps des classes",
+        "Erreurs silencieuses → exceptions : variable non déclarée (ReferenceError), propriété non writable ou delete impossible (TypeError)",
+        "this n'est plus remplacé : undefined si la fonction est appelée sans this, au lieu de globalThis",
+        "Syntaxe interdite : with, paramètres en double, octal préfixé par 0"
+      ],
+      "pitfalls": [
+        "Oublier que le code d'un module ou d'une classe est déjà strict : une fonction y appelée sans this explicite reçoit undefined, pas l'objet global"
+      ],
+      "source": {
+        "title": "Strict mode",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.this.determination",
+      "moduleId": "functions",
+      "kind": "recall",
+      "question": "Comment est déterminée la valeur de this dans une fonction classique ?",
+      "answer": "Elle dépend de la façon dont la fonction est appelée, pas de l'endroit où elle est définie : c'est un binding (liaison) fait à l'exécution. Appelée comme méthode, obj.method(), this vaut obj ; appelée seule, func(), this vaut undefined en strict mode et l'objet global en mode non strict (sloppy mode). Avec new, this est le nouvel objet en construction ; call et apply fixent this pour un appel donné, et bind crée une fonction dont le this ne change plus. Les arrow functions font exception : elles n'ont pas de this propre et héritent de celui du scope où elles sont définies.",
+      "details": "En mode non strict, la this substitution (remplacement automatique de this) garantit que this est toujours un objet : undefined ou null sont remplacés par globalThis, une primitive par son objet wrapper (Number, String…). Les classes sont toujours en strict mode : une méthode de classe appelée sans objet reçoit donc this = undefined.\n\nCas des callbacks : la valeur de this dépend de la façon dont l'API appelle la fonction. En général elle est appelée sans objet (this undefined, donc globalThis en mode non strict), comme avec les méthodes itératives des tableaux ou le constructeur Promise. Certaines API acceptent un thisArg, par exemple forEach(callback, thisArg).",
+      "keyPoints": [
+        "Dépend de la façon dont la fonction est appelée, pas de sa définition",
+        "obj.method() → this = obj",
+        "func() seule → undefined en strict mode, objet global en mode non strict",
+        "new → this = le nouvel objet en construction",
+        "call/apply fixent this pour un appel, bind crée une fonction au this figé"
+      ],
+      "pitfalls": [
+        "Oublier qu'une arrow function n'a pas de this propre : bind, call et apply ne peuvent pas le changer"
+      ],
+      "source": {
+        "title": "this",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.functions.arrowVsRegular",
+      "moduleId": "functions",
+      "kind": "compare",
+      "question": "Quelles différences entre une arrow function et une fonction classique ?",
+      "answer": "Une arrow function n'a pas ses propres bindings (liaisons) this, arguments ni super : elle utilise ceux du scope dans lequel elle est définie, et call, apply ou bind n'y changent rien. Elle ne peut pas servir de constructor, car l'appeler avec new lève une TypeError, elle n'a pas de propriété prototype et ne peut pas être un generator (pas de yield). Elle est donc à éviter comme méthode d'objet, mais idéale en callback de setTimeout ou addEventListener, où elle garde le this de la méthode qui l'entoure.",
+      "details": "Exemple de la page : dans une méthode doSomethingLater, setTimeout(function () { this.count++; }) s'exécute avec le this global et affiche NaN, alors que la même chose avec une arrow function réutilise le this de la méthode et affiche 11.\n\nEn class field, une arrow function capture le this de l'instance : autoBoundMethod = () => {…} reste liée à l'instance même extraite avec const { autoBoundMethod } = c, car c'est une closure (fonction qui garde l'accès aux variables du scope où elle a été créée) et non un binding propre.",
+      "keyPoints": [
+        "Pas de this ni de super propres : ceux du scope de définition",
+        "call, apply et bind ne changent pas son this",
+        "Pas d'objet arguments propre (utiliser les rest parameters)",
+        "Pas utilisable avec new (TypeError), pas de propriété prototype, pas de yield",
+        "À éviter comme méthode, idéale en callback (setTimeout, addEventListener)"
+      ],
+      "pitfalls": [
+        "Méthode d'objet littéral écrite en arrow function : this n'est pas l'objet (obj.b() affiche undefined dans l'exemple MDN)"
+      ],
+      "source": {
+        "title": "Arrow function expressions",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.this.callApplyBind",
+      "moduleId": "functions",
+      "kind": "compare",
+      "question": "Quelle différence entre call, apply et bind ?",
+      "answer": "Les trois permettent de choisir la valeur de this d'une fonction. call et apply appellent la fonction en lui passant this comme un paramètre explicite : call reçoit ensuite les arguments un par un, apply les reçoit dans un tableau. bind n'appelle rien : il crée une nouvelle fonction, avec le même corps et le même scope, dont le this est lié définitivement, quelle que soit la façon dont on l'appellera.",
+      "details": "Exemples de la page, avec call/apply puis bind :\n\nfunction add(c, d) {\n  return this.a + this.b + c + d;\n}\nconst o = { a: 1, b: 3 };\nadd.call(o, 5, 7); // 16\nadd.apply(o, [10, 20]); // 34\n\nfunction f() {\n  return this.a;\n}\nconst g = f.bind({ a: \"azerty\" });\ng(); // azerty\nconst h = g.bind({ a: \"yoo\" });\nh(); // azerty : bind ne marche qu'une fois",
+      "keyPoints": [
+        "call(thisArg, a, b) : appel immédiat, arguments un par un",
+        "apply(thisArg, [a, b]) : appel immédiat, arguments dans un tableau",
+        "bind(thisArg) : n'appelle pas, retourne une nouvelle fonction au this figé",
+        "Rebinder une fonction déjà liée ne change pas son this",
+        "Aucun des trois ne change le this d'une arrow function"
+      ],
+      "pitfalls": [
+        "En mode non strict, passer null ou undefined comme thisArg donne this = globalThis (this substitution), pas null"
+      ],
+      "source": {
+        "title": "this",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.functions.firstClass",
+      "moduleId": "functions",
+      "kind": "recall",
+      "question": "Que signifie « les fonctions sont first-class » en JavaScript, et qu'est-ce qu'une higher-order function ?",
+      "answer": "Les fonctions sont traitées comme n'importe quelle autre valeur : on peut les affecter à une variable, les passer en argument à une autre fonction et les retourner depuis une fonction. Une fonction passée en argument s'appelle une callback function. Une higher-order function est une fonction qui prend d'autres fonctions en arguments ou qui retourne une fonction, par exemple une fonction greeting qui reçoit la fonction sayHello et l'appelle pour construire son message.",
+      "details": "Exemple de la page : sayHello est une callback, greeting une higher-order function.\n\nfunction sayHello() {\n  return \"Hello, \";\n}\nfunction greeting(helloMessage, name) {\n  console.log(helloMessage() + name);\n}\ngreeting(sayHello, \"JavaScript!\");\n// Hello, JavaScript!",
+      "keyPoints": [
+        "Une fonction peut être affectée à une variable",
+        "Elle peut être passée en argument : c'est alors une callback",
+        "Elle peut être retournée par une autre fonction",
+        "Higher-order function : prend une fonction en argument ou retourne une fonction"
+      ],
+      "source": {
+        "title": "First-class function",
+        "url": "https://developer.mozilla.org/en-US/docs/Glossary/First-class_Function"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.this.lostInCallback",
+      "moduleId": "functions",
+      "kind": "code",
+      "question": "Que se passe-t-il au bout d'une seconde, pourquoi, et comment corriger ?",
+      "code": "class Counter {\n  constructor() {\n    this.data = new Map();\n  }\n  count(item) {\n    const n = this.data.get(item) || 0;\n    this.data.set(item, n + 1);\n  }\n}\n\nconst counter = new Counter();\ncounter.count(\"foo\"); // OK\nsetTimeout(counter.count, 1000, \"bar\");",
+      "answer": "Une TypeError : en passant counter.count directement à setTimeout, on détache la méthode de l'objet, le this est perdu et this.data vaut undefined. setTimeout appelle une fonction classique avec le this global (globalThis, c'est-à-dire window dans un navigateur), pas avec l'instance de Counter. On corrige en enveloppant l'appel dans une arrow function qui appelle counter.count elle-même, ou en passant une version liée avec bind(counter).",
+      "details": "Les corrections proposées par la page :\n\nsetTimeout(() => counter.count(\"bar\"), 1000);\nsetTimeout(counter.count.bind(counter), 1000,\n  \"bar\");\n\nDans une méthode de la classe, utiliser une arrow function comme callback : elle hérite du this de la méthode. bind évite d'ajouter une fonction wrapper (fonction intermédiaire), ce qui selon MDN augmente l'usage mémoire.",
+      "keyPoints": [
+        "TypeError : this.data est undefined dans count",
+        "Passer counter.count détache la méthode de l'objet : le this est perdu",
+        "setTimeout appelle une fonction classique avec le this global (window)",
+        "Correction : arrow function qui appelle counter.count(\"bar\")",
+        "Ou : counter.count.bind(counter)"
+      ],
+      "pitfalls": [
+        "Dans une méthode, setTimeout(function () { this… }) perd aussi le this : il faut une arrow function"
+      ],
+      "source": {
+        "title": "Window: setTimeout() method",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout#functions_are_called_with_the_global_this"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.functions.restVsArguments",
+      "moduleId": "functions",
+      "kind": "compare",
+      "question": "Quelles différences entre les rest parameters et l'objet arguments ?",
+      "answer": "Les rest parameters, écrits ...args en dernier paramètre, regroupent les arguments restants dans un vrai Array, sur lequel map, sort ou forEach marchent directement. L'objet arguments n'est qu'un array-like (il ressemble à un tableau sans en être un) et contient tous les arguments, y compris ceux des paramètres nommés. En mode non strict avec des paramètres simples, arguments reste synchronisé avec les paramètres réassignés, ce que ne fait jamais un rest parameter, et arguments porte en plus la propriété callee, dépréciée.",
+      "details": "Avant les rest parameters, il fallait convertir arguments avec Array.prototype.slice.call(arguments) ou Array.from(arguments) avant d'utiliser les méthodes de tableau. Un rest parameter se combine avec des paramètres ordinaires :\n\nfunction multiply(multiplier, ...theArgs) {\n  return theArgs.map((x) => multiplier * x);\n}\nmultiply(2, 15, 25, 42); // [30, 50, 84]",
+      "keyPoints": [
+        "Rest parameter = vrai Array ; arguments = array-like (pas de map, sort…)",
+        "Le rest ne contient que les arguments en trop, arguments les contient tous",
+        "Un seul rest parameter, en dernière position, sans valeur par défaut ni virgule finale",
+        "arguments se synchronise avec les paramètres en mode non strict (paramètres simples)",
+        "arguments.callee est déprécié"
+      ],
+      "pitfalls": [
+        "arguments.sort() ou arguments.shift() lèvent une TypeError : convertir d'abord (Array.from) ou utiliser un rest parameter"
+      ],
+      "source": {
+        "title": "Rest parameters",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/rest_parameters#the_difference_between_rest_parameters_and_the_arguments_object"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.functions.defaultParameters",
+      "moduleId": "functions",
+      "kind": "code",
+      "question": "Qu'affichent ces appels ?",
+      "code": "function test(num = 1) {\n  console.log(num);\n}\ntest();          // ?\ntest(undefined); // ?\ntest(null);      // ?\ntest(0);         // ?\n\nfunction append(value, array = []) {\n  array.push(value);\n  return array;\n}\nconsole.log(append(1)); // ?\nconsole.log(append(2)); // ?",
+      "answer": "test() et test(undefined) affichent 1, mais test(null) affiche null et test(0) affiche 0 : la valeur par défaut ne s'applique que si l'argument est absent ou vaut undefined, pas pour null ni les autres valeurs falsy (considérées comme fausses en contexte booléen). append(1) renvoie [1] puis append(2) renvoie [2], pas [1, 2], car la valeur par défaut est évaluée au moment de l'appel (call time) : un nouveau tableau est créé à chaque fois, contrairement à Python.",
+      "details": "Les initialiseurs ont leur propre scope, parent de celui du corps de la fonction : un paramètre peut utiliser les paramètres déclarés avant lui, mais pas les variables ou fonctions déclarées dans le corps.\n\nfunction greet(name, greeting,\n  message = `${greeting} ${name}`) {\n  return message;\n}\ngreet(\"David\", \"Hi\"); // \"Hi David\"",
+      "keyPoints": [
+        "Défaut appliqué si l'argument est absent ou vaut undefined",
+        "null, 0 ou \"\" ne déclenchent pas le défaut",
+        "Valeur par défaut évaluée à chaque appel : nouveau tableau à chaque fois",
+        "Sortie : 1, 1, null, 0, puis [1] et [2]"
+      ],
+      "pitfalls": [
+        "Une valeur par défaut ne voit pas le corps de la fonction : f(a = go()) avec go déclarée dans le corps lève une ReferenceError"
+      ],
+      "source": {
+        "title": "Default parameters",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Default_parameters"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.prototypes.chain",
+      "moduleId": "objects",
+      "kind": "recall",
+      "question": "Comment un objet trouve-t-il une propriété qu'il ne possède pas lui-même ?",
+      "answer": "Chaque objet a un lien interne vers un autre objet, son prototype, qui a lui-même un prototype, et ainsi de suite jusqu'à null : c'est la prototype chain. Quand on lit une propriété, elle est cherchée d'abord dans les own properties (propriétés définies sur l'objet lui-même), puis sur le prototype, le prototype du prototype, etc., jusqu'à la trouver ou atteindre la fin de la chaîne, auquel cas on obtient undefined. Une own property du même nom masque celle du prototype : c'est le property shadowing. Et quand une méthode héritée s'exécute, this désigne l'objet sur lequel on l'a appelée, pas le prototype.",
+      "details": "Exemple de la page (la syntaxe { __proto__: … } dans un objet littéral est standard, contrairement à l'accesseur obj.__proto__, non standard ; pour lire ou changer un prototype, utiliser Object.getPrototypeOf() et Object.setPrototypeOf()) :\n\nconst o = {\n  a: 1,\n  b: 2,\n  __proto__: { b: 3, c: 4 },\n};\n// { a: 1, b: 2 } ---> { b: 3, c: 4 }\n//   ---> Object.prototype ---> null\no.a; // 1 (own property)\no.b; // 2 (shadowing : le b du prototype est ignoré)\no.c; // 4 (trouvée sur le prototype)\no.d; // undefined (chaîne parcourue jusqu'à null)\n\nAccéder à une propriété inexistante parcourt toujours toute la chaîne. Ne pas confondre obj.[[Prototype]] avec la propriété prototype d'une fonction, qui définit le [[Prototype]] des instances créées avec new.",
+      "keyPoints": [
+        "Chaque objet a un [[Prototype]] ; la chaîne se termine par null",
+        "Recherche : own properties, puis prototype, puis prototype du prototype…",
+        "Fin de chaîne sans résultat → undefined",
+        "Une own property masque celle du prototype (property shadowing)",
+        "Dans une méthode héritée, this = l'objet appelant, pas le prototype"
+      ],
+      "pitfalls": [
+        "Tester === undefined ne dit pas si la propriété existe (elle peut valoir undefined) ; pour une own property, utiliser Object.hasOwn ou hasOwnProperty"
+      ],
+      "source": {
+        "title": "Inheritance and the prototype chain",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.classes.vsPrototypes",
+      "moduleId": "objects",
+      "kind": "recall",
+      "question": "Que sont les classes en JavaScript par rapport aux prototypes ?",
+      "answer": "Selon MDN, les classes sont construites sur les prototypes, mais elles ont aussi une syntaxe et une sémantique qui leur sont propres. Une classe est en fait une « special function » : ses méthodes sont installées sur le prototype et partagées par toutes les instances. Ce qui leur est propre : un corps toujours exécuté en strict mode, une déclaration soumise à la temporal dead zone comme let et const (elle se comporte comme si elle n'était pas hoistée), et une syntaxe dédiée pour les fields, les membres static et les private elements #.",
+      "details": "Placement des membres, d'après l'ordre d'évaluation décrit par la page : les méthodes et accessors d'instance sont installés sur la propriété prototype de la classe, les membres static sur la classe elle-même, et les champs d'instance sont créés sur chaque instance pendant la construction.\n\nclass Point {\n  static displayName = \"Point\";\n  constructor(x, y) {\n    this.x = x;\n    this.y = y;\n  }\n}\nconst p = new Point(5, 5);\np.displayName; // undefined\nPoint.displayName; // \"Point\"\n\nLes méthodes static servent souvent de fonctions utilitaires, les champs static de cache, de configuration fixe ou de données à ne pas dupliquer dans chaque instance.",
+      "keyPoints": [
+        "Construites sur les prototypes, avec une syntaxe et une sémantique propres",
+        "Une classe est une special function ; ses méthodes vivent sur le prototype, partagées",
+        "Corps de classe toujours en strict mode",
+        "Déclaration en temporal dead zone, comme let/const : pas utilisable avant sa ligne",
+        "Syntaxe propre : fields, static, private elements #"
+      ],
+      "pitfalls": [
+        "Réduire les classes à « du sucre syntaxique » : MDN souligne leur sémantique propre (strict mode, temporal dead zone, private elements)",
+        "Utiliser une classe avant sa déclaration : contrairement à une function declaration, elle n'est pas utilisable avant sa ligne"
+      ],
+      "source": {
+        "title": "Classes",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.objects.shallowVsDeepCopy",
+      "moduleId": "objects",
+      "kind": "compare",
+      "question": "Quelle différence entre copier un objet avec le spread ou Object.assign et avec structuredClone ?",
+      "answer": "Le spread et Object.assign ne vont qu'à un niveau de profondeur : ils font une shallow copy (copie superficielle), où seules les propriétés de premier niveau sont copiées et où les objets imbriqués restent les mêmes que dans l'original. Modifier un objet imbriqué via la copie modifie donc aussi l'original. Aucune opération native de JavaScript ne fait de deep clone (copie profonde) : structuredClone est une web API, pas une fonctionnalité du langage, et permet une copie profonde pour certains types supportés.",
+      "details": "Exemple de la page avec un tableau imbriqué :\n\nconst a = [[1], [2], [3]];\nconst b = [...a];\nb.shift().shift(); // 1\nconsole.log(a); // [[], [2], [3]] : a est touché\n\nUn spread seul crée une shallow copy sans les propriétés non énumérables et sans copier le prototype.",
+      "keyPoints": [
+        "Spread et Object.assign : shallow copy, un seul niveau",
+        "Objets imbriqués partagés : les modifier via la copie touche l'original",
+        "Aucune opération native de JavaScript ne fait de deep clone",
+        "structuredClone (web API) : copie profonde, pour certains types supportés",
+        "Le spread ne copie ni les propriétés non énumérables ni le prototype"
+      ],
+      "pitfalls": [
+        "Object.assign(cible, …) modifie la cible et déclenche ses setters ; le spread crée un nouvel objet sans appeler de setter"
+      ],
+      "source": {
+        "title": "Spread syntax (...)",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.destructuring.defaultsRenameRest",
+      "moduleId": "objects",
+      "kind": "code",
+      "question": "Que valent userId, role, name, first, third et rest ?",
+      "code": "const user = { id: 42, name: null };\n\nconst { id: userId, role = \"guest\" } = user;\nconst { name = \"anonyme\" } = user;\n\nconst [first, , third = 0, ...rest] =\n  [1, 2, undefined, 4, 5];",
+      "answer": "userId vaut 42, car { id: userId } lit la propriété id et la range dans une variable renommée. role vaut \"guest\" puisque la propriété est absente, mais name vaut null : la valeur par défaut ne sert que si la propriété est absente ou vaut undefined, jamais pour null. Côté tableau, first vaut 1, la virgule seule saute le 2, third prend 0 car l'élément vaut undefined, et rest rassemble les éléments restants dans un nouveau tableau [4, 5].",
+      "details": "Pour un objet, ...rest copie toutes les own properties énumérables pas encore extraites dans un nouvel objet. La déstructuration s'utilise aussi sans déclaration (assignment pattern) ou dans les paramètres d'une fonction :\n\nlet a = 1;\nlet b = 3;\n[a, b] = [b, a]; // a = 3, b = 1\nfunction getId({ id }) {\n  return id;\n}\ngetId({ id: 42 }); // 42",
+      "keyPoints": [
+        "{ id: userId } : renommage, la variable s'appelle userId (42)",
+        "Défaut si la valeur est absente ou undefined → role = \"guest\", third = 0",
+        "Pas de défaut pour null → name = null",
+        "Une virgule seule ignore un élément (first = 1, le 2 est sauté)",
+        "...rest, en dernier : nouveau tableau [4, 5]"
+      ],
+      "pitfalls": [
+        "Déstructurer null ou undefined lève une TypeError (const { a } = undefined)",
+        "Le rest doit être le dernier élément du pattern, sans virgule finale (SyntaxError)"
+      ],
+      "source": {
+        "title": "Destructuring",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.objects.newOperator",
+      "moduleId": "objects",
+      "kind": "recall",
+      "question": "Que fait concrètement l'opérateur new quand on écrit new Car(…) ?",
+      "answer": "Il crée un objet vide, puis fait pointer son [[Prototype]] (lien interne vers son prototype) vers Car.prototype, ce qui donne à l'instance accès à tout ce qu'on y ajoute. Il exécute ensuite le constructor avec les arguments, this étant lié à ce nouvel objet. Enfin, si le constructor retourne une valeur non primitive, c'est elle qui devient le résultat ; sinon, new renvoie l'objet créé.",
+      "details": "Si Car.prototype n'est pas un objet, la nouvelle instance garde Object.prototype comme [[Prototype]]. Une fonction peut savoir si elle a été appelée avec new grâce à new.target, qui vaut undefined sans new :\n\nfunction Car(color) {\n  if (!new.target) {\n    return `${color} car`;\n  }\n  this.color = color;\n}\nCar(\"red\"); // \"red car\"\nnew Car(\"red\"); // Car { color: \"red\" }",
+      "keyPoints": [
+        "Crée un objet vide",
+        "Son [[Prototype]] devient Car.prototype (si c'est un objet)",
+        "Exécute le constructor avec this = ce nouvel objet",
+        "Retourne cet objet, sauf si le constructor retourne une valeur non primitive"
+      ],
+      "pitfalls": [
+        "Appeler une constructor function sans new ne crée pas d'objet et this n'a pas la même valeur ; appeler une classe sans new lève une TypeError"
+      ],
+      "source": {
+        "title": "new",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/new"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.classes.superBeforeThis",
+      "moduleId": "objects",
+      "kind": "code",
+      "question": "Que se passe-t-il à l'exécution de new Square(2), et pourquoi ?",
+      "code": "class Rectangle {\n  constructor(height, width) {\n    this.height = height;\n    this.width = width;\n  }\n}\n\nclass Square extends Rectangle {\n  constructor(length) {\n    this.name = \"Square\";\n    super(length, length);\n  }\n}\nnew Square(2);",
+      "answer": "Une ReferenceError, car this est utilisé avant super(). Contrairement au constructor d'une classe de base, celui d'une derived class (classe déclarée avec extends) n'a pas de binding this au départ : c'est l'appel à super() qui exécute le constructor parent et crée ce this, à peu près comme si on écrivait this = new Rectangle(…). Il faut donc appeler super() en premier, avant tout accès à this et avant de sortir du constructor.",
+      "details": "Ce que précise la page : une classe dérivée sans constructor est valide, tout comme un constructor qui retourne un objet. En revanche, un constructor vide, constructor() {}, échoue au new avec « Must call super constructor in derived class before accessing 'this' or returning from derived constructor ».",
+      "keyPoints": [
+        "ReferenceError : this utilisé avant super()",
+        "Un constructor dérivé n'a pas de this tant que super() n'a pas été appelé",
+        "super() exécute le constructor parent et crée le binding this (≈ this = new Rectangle(…))",
+        "Correction : super(length, length) en première ligne, puis this.name"
+      ],
+      "pitfalls": [
+        "Un constructor dérivé qui se termine sans appeler super() lève aussi une ReferenceError, sauf s'il retourne un objet"
+      ],
+      "source": {
+        "title": "this",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this#derived_class_constructors"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.objects.freezeShallow",
+      "moduleId": "objects",
+      "kind": "code",
+      "question": "En mode non strict, qu'affiche ce code ? Que garantit vraiment Object.freeze, et en quoi est-ce différent de const ?",
+      "code": "const employee = {\n  name: \"Mayank\",\n  address: { city: \"Delhi\" },\n};\nemployee.role = \"dev\"; // avant le freeze\n\nObject.freeze(employee);\nemployee.name = \"Dummy\";\nemployee.address.city = \"Noida\";\n\nconsole.log(employee.role);         // ?\nconsole.log(employee.name);         // ?\nconsole.log(employee.address.city); // ?",
+      "answer": "Il affiche dev, Mayank puis Noida. Déclarer l'objet avec const n'empêche pas de le modifier, comme le montre l'ajout de role avant le freeze ; c'est Object.freeze qui bloque l'ajout, la suppression et la réassignation de ses propriétés, en échouant silencieusement en mode non strict et avec une TypeError en strict mode. Mais freeze est shallow (superficiel) : il ne s'applique qu'aux propriétés directes de l'objet, donc l'objet imbriqué address reste modifiable.",
+      "details": "Pour un objet vraiment immuable, MDN propose de geler récursivement chaque propriété non primitive (deep freeze), à réserver aux objets sans cycles :\n\nfunction deepFreeze(object) {\n  for (const name of Reflect.ownKeys(object)) {\n    const value = object[name];\n    if ((value && typeof value === \"object\") ||\n        typeof value === \"function\") {\n      deepFreeze(value);\n    }\n  }\n  return Object.freeze(object);\n}\n\nLes private elements ne sont pas des propriétés : geler un objet n'empêche pas de modifier leurs valeurs.",
+      "keyPoints": [
+        "Sortie : dev, Mayank, Noida",
+        "const n'empêche pas de modifier l'objet (role ajouté avant le freeze)",
+        "freeze bloque ajout, suppression et réassignation des propriétés directes",
+        "Échec silencieux en mode non strict, TypeError en strict mode",
+        "Shallow : les objets imbriqués restent modifiables (sinon deep freeze récursif)"
+      ],
+      "pitfalls": [
+        "freeze ne crée pas de copie : il retourne le même objet, gelé",
+        "Un deep freeze récursif boucle à l'infini si le graphe d'objets contient des cycles"
+      ],
+      "source": {
+        "title": "Object.freeze()",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.classes.privateElements",
+      "moduleId": "objects",
+      "kind": "compare",
+      "question": "Champ privé #count ou propriété _count « privée par convention » : quelle différence concrète ?",
+      "answer": "_count reste une propriété publique ordinaire : tout code peut la lire, la modifier, l'énumérer ou la supprimer, le _ n'est qu'une indication de nommage. #count est un private element : l'encapsulation est garantie par JavaScript lui-même, et on n'y accède qu'en notation pointée, depuis la classe qui le déclare. Y faire référence hors de la classe est une SyntaxError, et lire #count sur un objet qui ne l'a pas lève une TypeError ; on le teste sans risque avec #count in obj.",
+      "details": "Exemple de la page (brand check avec in) :\n\nclass C {\n  #x;\n  constructor(x) {\n    this.#x = x;\n  }\n  static getX(obj) {\n    if (#x in obj) return obj.#x;\n    return \"obj must be an instance of C\";\n  }\n}\nC.getX(new C(\"foo\")); // \"foo\"\nC.getX({}); // \"obj must be an instance of C\"\n\nAutres particularités listées par la page : un private element n'a pas les attributs d'une propriété (writable, enumerable, configurable), n'est pas copié par structuredClone et n'est pas figé par Object.freeze.",
+      "keyPoints": [
+        "_count : propriété publique normale, le _ n'est qu'une convention",
+        "#count : privé garanti par le langage, accessible seulement dans la classe qui le déclare",
+        "Référence hors de la classe → SyntaxError",
+        "Lecture sur un objet sans ce champ → TypeError ; test avec #count in obj",
+        "Pas une propriété : ni énuméré, ni supprimable, ni accessible via Proxy ou les méthodes Object"
+      ],
+      "pitfalls": [
+        "Une sous-classe ne peut pas lire le #champ de sa classe parente",
+        "Écrire this.#x sans avoir déclaré #x dans le corps de la classe est une SyntaxError"
+      ],
+      "source": {
+        "title": "Private elements",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_elements"
+      },
+      "since": "ES2022",
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.classes.gettersSetters",
+      "moduleId": "objects",
+      "kind": "recall",
+      "question": "À quoi servent un getter et un setter, et en quoi diffèrent-ils d'une méthode classique ?",
+      "answer": "La syntaxe get lie une propriété à une fonction appelée quand on lit cette propriété : on expose une valeur calculée, ou l'état d'une variable interne, sans obliger à appeler une méthode explicitement. On y accède comme à une propriété, sans parenthèses, et un getter ne prend aucun paramètre ; le setter associé, déclaré avec set, s'exécute à l'affectation. Associés à un champ privé #, ils contrôlent la lecture et l'écriture, et dans une classe ils sont définis sur le prototype, donc partagés par toutes les instances.",
+      "details": "Exemple de la page :\n\nclass ClassWithGetSet {\n  #msg = \"hello world\";\n  get msg() {\n    return this.#msg;\n  }\n  set msg(x) {\n    this.#msg = `hello ${x}`;\n  }\n}\nconst instance = new ClassWithGetSet();\ninstance.msg = \"cake\";\ninstance.msg; // \"hello cake\"\n\nLazy getter (getter paresseux) : le getter calcule la valeur au premier accès, puis se remplace par une data property (propriété qui stocke une valeur) pour la mettre en cache. Utile si le calcul est coûteux et la valeur pas forcément nécessaire tout de suite ; à éviter si la valeur doit changer.",
+      "keyPoints": [
+        "get lie une propriété à une fonction exécutée à la lecture",
+        "Sert à exposer une valeur calculée ou l'état interne sans appel de méthode explicite",
+        "Accès sans parenthèses, zéro paramètre",
+        "set s'exécute à l'affectation ; avec un champ #, contrôle lecture et écriture",
+        "En classe : défini sur le prototype, partagé et non énumérable"
+      ],
+      "pitfalls": [
+        "Affecter une valeur à une propriété qui n'a qu'un getter ne la change pas",
+        "Un getter ne peut pas porter le nom d'une data property du même objet : une propriété est soit data, soit accessor"
+      ],
+      "source": {
+        "title": "get",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.eventLoop.tasksVsMicrotasks",
+      "moduleId": "async",
+      "kind": "recall",
+      "question": "Comment l'event loop enchaîne-t-elle la call stack, les tasks (macrotasks) et les microtasks ?",
+      "answer": "L'event loop exécute une task par itération, la plus ancienne de la task queue : lancement d'un script, événement comme un clic, callback de setTimeout ou de setInterval. Dès que cette task se termine et que la pile d'exécution (call stack) est vide, elle exécute toutes les microtasks en attente (callbacks de promesses, queueMicrotask(), MutationObserver), y compris celles ajoutées entre-temps. Ensuite seulement, le navigateur peut mettre à jour le rendu, puis on passe à l'itération suivante.",
+      "details": "Définition MDN : une microtask est une fonction courte exécutée après la fin de la fonction ou du programme qui l'a créée, seulement si la pile d'exécution est vide, mais avant de rendre la main à l'event loop. La microtask queue est donc traitée plusieurs fois par itération, notamment après chaque gestionnaire d'événement ou autre callback.\n\nDifférence clé : une seule task est prise par itération, alors que la microtask queue est vidée jusqu'au bout, même si de nouvelles microtasks arrivent pendant ce temps. MDN n'emploie pas le mot macrotask : la doc parle simplement de task et de task queue.",
+      "keyPoints": [
+        "Une task par itération : la plus ancienne de la task queue (script, événement, setTimeout/setInterval)",
+        "Après chaque task, une fois la pile d'exécution vide, toutes les microtasks sont exécutées",
+        "Microtasks : callbacks de promesses, queueMicrotask(), MutationObserver",
+        "Une microtask ajoutée pendant le vidage passe avant la task suivante",
+        "Le rendu peut être mis à jour après les microtasks, avant l'itération suivante"
+      ],
+      "pitfalls": [
+        "Enfiler des microtasks récursivement peut bloquer l'event loop : la file ne se vide jamais, la task suivante n'arrive jamais"
+      ],
+      "source": {
+        "title": "Using microtasks in JavaScript with queueMicrotask()",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.promises.states",
+      "moduleId": "async",
+      "kind": "recall",
+      "question": "Quels sont les états d'une Promise, et que signifie exactement « resolved » ?",
+      "answer": "Une Promise est d'abord pending, puis devient fulfilled avec une valeur ou rejected avec une raison, en général une erreur ; dans ces deux cas, on dit qu'elle est settled (réglée). Resolved ne veut pas dire fulfilled : une promesse resolved est soit settled, soit « verrouillée » (locked-in) sur l'état final d'une autre promesse, et la résoudre ou la rejeter à nouveau n'a plus d'effet. Une promesse résolue avec une promesse encore pending reste donc pending, et peut même finir rejected.",
+      "details": "Exemple de la doc : la promesse externe est resolved dès sa création, car resolveOuter est appelé de façon synchrone, mais elle ne sera fulfilled qu'une seconde plus tard, quand la promesse interne le sera.\n\nnew Promise((resolveOuter) => {\n  resolveOuter(\n    new Promise((resolveInner) => {\n      setTimeout(resolveInner, 1000);\n    }),\n  );\n});\n\nEn pratique, la résolution se fait souvent en coulisses et n'est pas observable : seuls le fulfillment ou le rejet le sont.",
+      "keyPoints": [
+        "Trois états : pending (initial), fulfilled (avec une valeur), rejected (avec une raison)",
+        "Settled = fulfilled ou rejected, c'est-à-dire plus pending",
+        "Resolved = settled ou locked-in sur une autre promesse ; un nouveau resolve/reject est sans effet",
+        "Une promesse resolved peut encore être pending, ou finir rejected",
+        "Un handler attaché après le settle est quand même appelé : pas de race condition"
+      ],
+      "pitfalls": [
+        "Employer « resolved » comme synonyme de « fulfilled » : c'est l'usage courant, mais c'est faux quand la promesse est résolue avec une autre promesse"
+      ],
+      "source": {
+        "title": "Promise – Description",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise#description"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.asyncAwait.asyncFunction",
+      "moduleId": "async",
+      "kind": "recall",
+      "question": "Que fait une async function, et que fait await à l'intérieur ?",
+      "answer": "Une async function renvoie toujours une nouvelle promesse : resolved avec la valeur qu'elle retourne, ou rejected avec l'exception non attrapée à l'intérieur. Son corps s'exécute de façon synchrone jusqu'au premier await inclus ; await suspend alors la fonction jusqu'à ce que la promesse attendue soit settled, et rend la main à l'appelant. La suite du corps se comporte comme un callback de then : l'expression await vaut la valeur de la promesse, et on peut entourer ce code asynchrone d'un try/catch ordinaire.",
+      "details": "Équivalences données par la doc, proches mais pas identiques, car l'async function renvoie toujours une nouvelle référence de promesse :\n\nasync function foo() {\n  return 1;\n}\n// est similaire à :\nfunction foo() {\n  return Promise.resolve(1);\n}\n\nasync function bar() {\n  await 1;\n}\n// est équivalent à :\nfunction bar() {\n  return Promise.resolve(1)\n    .then(() => undefined);\n}",
+      "keyPoints": [
+        "Renvoie toujours une nouvelle promesse ; une valeur simple est enveloppée implicitement",
+        "return → promesse resolved avec la valeur ; exception non attrapée → promesse rejected",
+        "Le corps est synchrone jusqu'au premier await inclus",
+        "await suspend la fonction jusqu'au settle et rend la main à l'appelant ; la suite est comme dans un then",
+        "await n'est valide que dans une async function (ou au top level d'un module), sinon SyntaxError"
+      ],
+      "pitfalls": [
+        "Croire qu'une async function sans await est asynchrone : son corps s'exécute de façon synchrone, seul le résultat est enveloppé dans une promesse",
+        "Croire que return p renvoie la promesse p elle-même : l'async function renvoie une autre référence, contrairement à Promise.resolve(p)"
+      ],
+      "source": {
+        "title": "async function – Description",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function#description"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.promises.concurrency",
+      "moduleId": "async",
+      "kind": "compare",
+      "question": "Quelle différence entre Promise.all(), Promise.allSettled(), Promise.any() et Promise.race() ?",
+      "answer": "Les quatre prennent un itérable de promesses et renvoient une seule promesse. Promise.all est fulfilled quand toutes le sont, avec le tableau de leurs valeurs, et rejected dès le premier rejet ; Promise.allSettled attend que toutes soient settled et donne un tableau d'objets qui décrivent le résultat de chacune, échecs compris. Promise.any est fulfilled avec la première valeur obtenue et ne rejette que si toutes rejettent, avec une AggregateError (erreur qui regroupe toutes les raisons de rejet) ; Promise.race adopte l'état de la première promesse settled, succès ou échec.",
+      "details": "Ce n'est pas du parallélisme : JavaScript est single-threaded, une seule tâche s'exécute à un instant donné, mais le contrôle passe d'une promesse à l'autre, ce qui donne l'apparence de la concurrence. Le vrai parallélisme passe par les Web Workers.\n\nPromise.all rejette avec la raison du premier rejet ; Promise.any rejette avec une AggregateError qui contient le tableau des raisons de rejet.",
+      "keyPoints": [
+        "all : toutes fulfilled → tableau des valeurs ; rejette au premier rejet",
+        "allSettled : attend que toutes soient settled → un objet décrivant le résultat de chacune",
+        "any : la première fulfilled gagne ; rejette seulement si toutes rejettent (AggregateError)",
+        "race : adopte l'état de la première promesse settled, fulfilled ou rejected"
+      ],
+      "pitfalls": [
+        "Confondre any et race : race rejette si la première promesse à se terminer échoue, alors que any attend la première réussite",
+        "Itérable vide : all et allSettled sont fulfilled, any est rejected"
+      ],
+      "source": {
+        "title": "Promise – Promise concurrency",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise#promise_concurrency"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.eventLoop.logOrder",
+      "moduleId": "async",
+      "kind": "code",
+      "question": "Dans quel ordre s'affichent ces logs, et pourquoi ?",
+      "code": "console.log(\"A\");\nsetTimeout(() => console.log(\"B\"), 0);\nnew Promise((resolve) => {\n  console.log(\"C\");\n  resolve();\n}).then(() => console.log(\"D\"));\nPromise.resolve()\n  .then(() => console.log(\"E\"))\n  .then(() => console.log(\"F\"));\nconsole.log(\"G\");",
+      "answer": "L'ordre est A, C, G, D, E, F, puis B. Le code synchrone passe d'abord, y compris l'executor (la fonction passée à new Promise), appelé immédiatement, d'où C avant G. Les callbacks de then ne sont jamais synchrones, même sur une promesse déjà résolue : ils vont dans la microtask queue, vidée dès que la pile d'exécution est vide, et F n'y entre qu'après E. Le callback de setTimeout, même à 0 ms, est une task qui attend le tour suivant de l'event loop : B sort en dernier.",
+      "details": "Règle MDN : une fonction passée à then() est placée dans une microtask queue ; elle ne tourne qu'après la fin de la fonction qui l'a créée, quand la pile d'exécution est vide, juste avant de rendre la main à l'event loop. Les callbacks de setTimeout(), eux, passent par la task queue.\n\nExemple de la doc :\n\nconst wait = (ms) =>\n  new Promise((resolve) => setTimeout(resolve, ms));\nwait(0).then(() => console.log(4));\nPromise.resolve()\n  .then(() => console.log(2))\n  .then(() => console.log(3));\nconsole.log(1); // 1, 2, 3, 4",
+      "keyPoints": [
+        "Ordre : A, C, G, D, E, F, B",
+        "L'executor de new Promise s'exécute de façon synchrone (C avant G)",
+        "Les callbacks de then() ne sont jamais synchrones : ils passent par la microtask queue",
+        "Un then chaîné n'est mis en file qu'après la fin du précédent (E puis F)",
+        "setTimeout(…, 0) crée une task, exécutée après toutes les microtasks"
+      ],
+      "pitfalls": [
+        "Croire que setTimeout(…, 0) passe avant une promesse déjà résolue",
+        "Croire que le corps de l'executor est exécuté de façon asynchrone"
+      ],
+      "source": {
+        "title": "Using promises – Timing",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises#timing"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.promises.chaining",
+      "moduleId": "async",
+      "kind": "code",
+      "question": "Qu'affiche ce code, et pourquoi ?",
+      "code": "Promise.resolve(1)\n  .then((n) => n * 2)\n  .then((n) => {\n    throw new Error(`Échec ${n}`);\n  })\n  .then(() => console.log(\"A\"))\n  .catch((e) => console.log(e.message))\n  .then(() => console.log(\"C\"));",
+      "answer": "Il affiche « Échec 2 » puis « C », jamais « A ». Chaque then() renvoie une nouvelle promesse dont l'état dépend du handler : une valeur retournée la rend fulfilled avec cette valeur (d'où n = 2), une erreur levée la rend rejected. Un then sans rejection handler transmet le rejet tel quel, donc A est sauté jusqu'au catch, qui n'est qu'un then sans fulfillment handler. Le handler du catch se termine normalement, donc la promesse qu'il renvoie est fulfilled et la chaîne continue avec C.",
+      "details": "Les quatre règles de la doc pour la promesse renvoyée par then() : si le handler renvoie un thenable (objet doté d'une méthode then, comme une promesse), elle prend le même état que lui ; s'il renvoie une autre valeur, elle est fulfilled avec cette valeur ; s'il lève une erreur, elle est rejected avec cette erreur ; si aucun handler ne correspond à l'état de la promesse initiale, elle prend le même état qu'elle.",
+      "keyPoints": [
+        "Sortie : « Échec 2 » puis « C »",
+        "then() renvoie une nouvelle promesse, fulfilled avec la valeur retournée par le handler",
+        "Une erreur levée dans un handler rend la nouvelle promesse rejected",
+        "Sans rejection handler, le rejet se propage tel quel jusqu'au prochain catch",
+        "catch() est un then() sans fulfillment handler ; s'il se termine normalement, la chaîne repart en fulfilled"
+      ],
+      "pitfalls": [
+        "Croire qu'un catch arrête la chaîne : les then placés après lui s'exécutent toujours",
+        "Oublier le return d'une promesse dans un handler : il renvoie undefined, et la promesse suivante est fulfilled avec undefined sans attendre l'opération"
+      ],
+      "source": {
+        "title": "Promise – Chained Promises",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise#chained_promises"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.asyncAwait.sequentialVsConcurrent",
+      "moduleId": "async",
+      "kind": "code",
+      "question": "getUser et getOrders sont indépendants l'un de l'autre. Quel est le problème de ce code, et comment le corriger ?",
+      "code": "async function loadPage(id) {\n  const user = await getUser(id);\n  const orders = await getOrders(id);\n  return { user, orders };\n}",
+      "answer": "Les deux await s'enchaînent en série : getOrders n'est lancé qu'une fois getUser terminé, donc la durée totale est la somme des deux. Comme les appels sont indépendants, on les lance ensemble et on attend Promise.all sur les deux promesses, ce qui ramène la durée à celle du plus lent. Promise.all branche en plus toute la chaîne d'un coup : il échoue dès le premier rejet (fail-fast) et l'erreur reste attrapable normalement par l'appelant.",
+      "details": "Version corrigée :\n\nasync function loadPage(id) {\n  const [user, orders] = await Promise.all([\n    getUser(id),\n    getOrders(id),\n  ]);\n  return { user, orders };\n}\n\nLa doc compare trois variantes avec deux timers de 2 s et 1 s : sequentialStart (un await après l'autre) finit en 3 s ; sequentialWait (deux promesses lancées puis attendues l'une après l'autre) finit en 2 s, mais traite le résultat rapide après le lent et risque l'unhandled rejection ; concurrent1 (await Promise.all) finit en 2 s et propage correctement les erreurs.",
+      "keyPoints": [
+        "await successifs = série : le deuxième appel ne démarre qu'après la fin du premier",
+        "Série : durée = somme des appels ; concurrence : durée = le plus lent",
+        "Correction : const [user, orders] = await Promise.all([getUser(id), getOrders(id)])",
+        "Promise.all est fail-fast et garde l'erreur dans la chaîne, donc attrapable par l'appelant"
+      ],
+      "pitfalls": [
+        "Lancer les deux promesses puis faire await p1 puis await p2 : elles tournent bien en même temps, mais si p2 rejette avant que p1 soit fulfilled, on obtient une unhandled rejection (rejet sans handler), même si l'appelant a un catch"
+      ],
+      "source": {
+        "title": "async function – Async functions and execution order",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function#async_functions_and_execution_order"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.asyncAwait.missingAwait",
+      "moduleId": "async",
+      "kind": "code",
+      "question": "postOrder() renvoie une promesse qui peut être rejetée. Quel est le bug ?",
+      "code": "async function submit(order) {\n  try {\n    postOrder(order);\n    showMessage(\"Commande envoyée\");\n  } catch (error) {\n    showMessage(\"Échec de l'envoi\");\n  }\n}",
+      "answer": "Il manque await devant postOrder(order) : la promesse n'est pas attendue, donc son rejet ne remonte pas dans le try et le catch ne s'exécute jamais. Le message de succès s'affiche tout de suite, et la promesse rejetée flotte (floating promise : plus personne ne suit son résultat), ce qui déclenche une unhandled rejection, signalée par l'événement unhandledrejection du navigateur ou unhandledRejection de Node.js. Avec await, le rejet devient une exception attrapée par le catch, comme en code synchrone.",
+      "details": "Même piège dans une chaîne de then, exemple de la doc :\n\ndoSomething()\n  .then((url) => {\n    // return manquant devant fetch(url)\n    fetch(url);\n  })\n  .then((result) => {\n    // result vaut undefined : impossible\n    // de savoir si fetch() a réussi\n  });\n\nFilet de sécurité global : l'événement unhandledrejection (sur window, ou sur le Worker) expose promise et reason ; côté Node.js, on écoute process.on(\"unhandledRejection\", (reason, promise) => …). Ces handlers sont globaux par contexte : ils servent de repli et d'aide au debug.",
+      "keyPoints": [
+        "Sans await, le rejet ne passe pas par le try : le catch ne s'exécute jamais",
+        "Le message de succès s'affiche même si l'envoi échoue",
+        "La promesse rejetée sans handler déclenche unhandledrejection (navigateur) ou unhandledRejection (Node.js)",
+        "Correction : await postOrder(order) dans le try",
+        "Même piège dans une chaîne de then : il faut return la promesse"
+      ],
+      "pitfalls": [
+        "Rien ne signale l'oubli à l'écriture : la doc note qu'un await oublié ne se repère souvent qu'au moment où l'on utilise la promesse comme une valeur",
+        "Un listener process.on(\"unhandledRejection\") qui ne traite rien fait disparaître les rejets silencieusement"
+      ],
+      "source": {
+        "title": "Using promises",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.promises.wrapCallbackApi",
+      "moduleId": "async",
+      "kind": "recall",
+      "question": "Comment transformer une API à callbacks, comme readFile(path, (error, result) => …), en fonction qui renvoie une promesse ?",
+      "answer": "On renvoie une new Promise dont l'executor (la fonction passée au constructeur) appelle l'API : dans son callback, on appelle reject(error) en cas d'erreur, sinon resolve(result). L'executor est appelé de façon synchrone dès la construction, et une exception levée à l'intérieur rejette la promesse. Seul le premier appel à resolve ou à reject compte, et la valeur de retour de l'executor est ignorée : il faut appeler resolve, pas faire un return.",
+      "details": "Exemple de la doc :\n\nconst readFilePromise = (path) =>\n  new Promise((resolve, reject) => {\n    readFile(path, (error, result) => {\n      if (error) {\n        reject(error);\n      } else {\n        resolve(result);\n      }\n    });\n  });\n\nreadFilePromise(\"./data.txt\")\n  .then((result) => console.log(result))\n  .catch((error) => console.error(\"Échec\"));\n\nSi on passe à resolve une autre promesse, l'état de la nouvelle promesse est « verrouillé » (locked in) sur celle-ci.",
+      "keyPoints": [
+        "return new Promise((resolve, reject) => { … }) autour de l'appel à l'API",
+        "Dans le callback : reject(error) si erreur, sinon resolve(result)",
+        "L'executor s'exécute de façon synchrone, dès la construction",
+        "Une exception levée dans l'executor rejette la promesse (sauf si resolve ou reject a déjà été appelé)",
+        "Seul le premier appel à resolve/reject compte ; le return de l'executor est ignoré"
+      ],
+      "pitfalls": [
+        "Faire return result dans l'executor : la valeur est ignorée et la promesse reste pending",
+        "Rejeter avec une simple chaîne : reject a une sémantique proche de throw, la raison est en général une instance d'Error"
+      ],
+      "source": {
+        "title": "Promise() constructor – Description",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise#description"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.abortController.cancelFetch",
+      "moduleId": "async",
+      "kind": "recall",
+      "question": "Comment annuler une requête fetch en cours, et comment lui imposer un timeout ?",
+      "answer": "On crée un AbortController, on passe son signal (un AbortSignal) dans les options de fetch, puis on appelle controller.abort() : la promesse de fetch est alors rejected avec une DOMException nommée AbortError. Pour un timeout, on passe directement AbortSignal.timeout(ms) comme signal ; en cas de dépassement, le rejet est une TimeoutError, ce qui permet de distinguer un timeout d'une annulation par l'utilisateur. AbortSignal.any() combine plusieurs signaux, par exemple un bouton Annuler et un timeout.",
+      "details": "Exemple adapté de la doc :\n\ntry {\n  const res = await fetch(url, {\n    signal: AbortSignal.timeout(5000),\n  });\n  const result = await res.blob();\n} catch (err) {\n  if (err.name === \"TimeoutError\") {\n    // plus de 5 secondes\n  } else if (err.name === \"AbortError\") {\n    // annulé par l'utilisateur\n  }\n}\n\nSi l'annulation arrive après la résolution de fetch mais avant la lecture du body, c'est la lecture du body qui rejette avec AbortError. Pour rendre sa propre API annulable, on accepte un signal et on rejette la promesse en cours avec signal.reason à l'événement abort ; signal.throwIfAborted() lève tout de suite cette raison si le signal est déjà annulé.",
+      "keyPoints": [
+        "new AbortController(), puis fetch(url, { signal: controller.signal })",
+        "controller.abort() → fetch rejette avec une DOMException AbortError",
+        "AbortSignal.timeout(ms) → rejet avec une TimeoutError, distincte d'AbortError",
+        "Un signal ne sert qu'une fois : un nouveau controller pour chaque requête",
+        "AbortSignal.any([…]) combine plusieurs signaux"
+      ],
+      "pitfalls": [
+        "Réutiliser un signal déjà annulé : tout fetch qui l'utilise est rejeté immédiatement"
+      ],
+      "source": {
+        "title": "AbortSignal – Examples",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal#examples"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.asyncIteration.forAwaitOf",
+      "moduleId": "async",
+      "kind": "compare",
+      "question": "Que fait for await...of, et en quoi diffère-t-il de for...of ?",
+      "answer": "for await...of parcourt un async iterable (objet qui fournit ses valeurs via des promesses, comme un async generator) : il appelle sa méthode [Symbol.asyncIterator]() puis attend la promesse de chaque next() avant d'exécuter le corps de la boucle. Il accepte aussi les iterables synchrones et attend alors les promesses qu'ils produisent, là où for...of donnerait les promesses elles-mêmes. Il ne s'utilise que là où await est permis, dans une async function ou au top level d'un module, et un break ou une erreur appelle return() sur l'itérateur pour le nettoyage.",
+      "details": "Exemple adapté de la doc, avec un generator synchrone qui produit une promesse :\n\nfunction* generator() {\n  yield 0;\n  yield Promise.resolve(1);\n}\n(async () => {\n  for await (const n of generator()) {\n    console.log(n); // 0, puis 1\n  }\n  for (const n of generator()) {\n    console.log(n); // 0, puis Promise { 1 }\n  }\n})();\n\nSi un generator synchrone produit une promesse rejetée, for await...of appelle d'abord sa méthode return(), ce qui exécute ses blocs finally, puis lève la raison du rejet dans la boucle.",
+      "keyPoints": [
+        "Itère un async iterable via [Symbol.asyncIterator](), en attendant chaque next()",
+        "Accepte aussi les iterables synchrones (repli sur [Symbol.iterator]()) et attend les promesses produites",
+        "Sur des promesses, for...of donne les promesses, for await...of donne leurs valeurs",
+        "Utilisable seulement dans une async function ou au top level d'un module",
+        "break ou erreur → appel de return() sur l'itérateur (cleanup), attendu avant de sortir"
+      ],
+      "pitfalls": [
+        "L'utiliser sur un iterable synchrone sans raison : la boucle attend quand même à chaque itération, ce qui ralentit l'exécution"
+      ],
+      "source": {
+        "title": "for await...of – Description",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for-await...of#description"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.promises.withResolvers",
+      "moduleId": "async",
+      "kind": "recall",
+      "question": "À quoi sert Promise.withResolvers() ?",
+      "answer": "Promise.withResolvers() renvoie un objet avec trois propriétés : une nouvelle promesse (promise) et les deux fonctions qui la résolvent ou la rejettent (resolve et reject). C'est exactement l'équivalent du pattern où l'on déclare let resolve, reject avant un new Promise pour les récupérer dans l'executor, en plus concis. L'intérêt : resolve et reject vivent dans le même scope que la promesse, donc on peut les appeler depuis un event listener qu'on ne peut pas placer dans l'executor, ou recréer une paire à chaque événement récurrent, par exemple pour lire un stream.",
+      "details": "Exemple de la doc : un stream Node.js transformé en async iterable. Les listeners sont attachés une seule fois, mais appellent à chaque lot de données une nouvelle paire resolve/reject.\n\nasync function* readableToAsyncIterable(stream) {\n  let { promise, resolve, reject } =\n    Promise.withResolvers();\n  stream.on(\"error\", (error) => reject(error));\n  stream.on(\"end\", () => resolve());\n  stream.on(\"readable\", () => resolve());\n  while (stream.readable) {\n    await promise;\n    let chunk;\n    while ((chunk = stream.read())) {\n      yield chunk;\n    }\n    ({ promise, resolve, reject } =\n      Promise.withResolvers());\n  }\n}\n\nLa méthode est générique : appelée sur une sous-classe de Promise, elle renvoie une promesse de cette sous-classe.",
+      "keyPoints": [
+        "Renvoie un objet simple { promise, resolve, reject }",
+        "Équivaut à let resolve, reject; puis new Promise((res, rej) => { resolve = res; reject = rej; })",
+        "resolve et reject sont accessibles hors de l'executor, dans le même scope que la promesse",
+        "Cas d'usage : résoudre depuis un event listener (streams, files d'attente, événements récurrents)",
+        "Moins d'imbrication que de tout placer dans l'executor"
+      ],
+      "source": {
+        "title": "Promise.withResolvers()",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/withResolvers"
+      },
+      "since": "ES2024",
+      "difficulty": 3
+    },
+    {
+      "id": "javascript.arrays.mutatingVsCopying",
+      "moduleId": "collections",
+      "kind": "compare",
+      "question": "Quelle différence entre sort() et toSorted() ? Cite les autres paires de méthodes de tableau qui mutent ou qui copient.",
+      "answer": "sort(), reverse() et splice() modifient le tableau sur place (in place) : sort() renvoie ce même tableau, splice() renvoie le tableau des éléments retirés. Leurs versions copiantes toSorted(), toReversed() et toSpliced() renvoient un nouveau tableau et laissent l'original intact, tout comme with(index, value), qui renvoie une copie où un seul élément est remplacé. La copie est shallow (superficielle) : les primitives sont copiées, mais les objets sont partagés par référence entre l'original et la copie.",
+      "details": "Pour les autres méthodes qui mutent, la doc donne ces équivalents : pop() → slice(0, -1), push(v1, v2) → concat([v1, v2]), shift() → slice(1), unshift(v1, v2) → toSpliced(0, 0, v1, v2). copyWithin() et fill() n'ont pas d'alternative en une seule méthode : on copie d'abord avec slice() ou le spread, puis on mute la copie.\n\nconst arr2 = arr.slice().copyWithin(0, 1, 2);\nconst arr3 = [...arr].copyWithin(0, 1, 2);\n\nDétail d'implémentation : toSorted(), toReversed(), toSpliced() et with() créent toujours un Array de base, alors que les anciennes méthodes qui renvoient un nouveau tableau (map(), filter(), slice(), concat()…) passent par this.constructor[Symbol.species] pour choisir le constructeur.",
+      "keyPoints": [
+        "sort(), reverse() et splice() mutent le tableau d'origine",
+        "toSorted(), toReversed() et toSpliced() renvoient un nouveau tableau, l'original reste intact",
+        "with(index, value) : copie avec un seul élément remplacé",
+        "Copie shallow : les objets contenus sont partagés par référence",
+        "Alternative générique : copier avec [...arr] ou slice() avant de muter"
+      ],
+      "pitfalls": [
+        "splice() ne renvoie pas le tableau modifié mais le tableau des éléments retirés",
+        "Croire qu'une copie protège les objets imbriqués : modifier un objet contenu se voit dans les deux tableaux"
+      ],
+      "source": {
+        "title": "Array – Copying methods and mutating methods",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array#copying_methods_and_mutating_methods"
+      },
+      "since": "ES2023",
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.arrays.reduce",
+      "moduleId": "collections",
+      "kind": "recall",
+      "question": "Comment fonctionne Array.prototype.reduce(), et quel rôle joue la valeur initiale ?",
+      "answer": "reduce() appelle un callback « reducer » sur chaque élément, dans l'ordre des index, et la valeur renvoyée par chaque appel devient l'accumulator de l'appel suivant ; la dernière valeur renvoyée est le résultat. Avec une initialValue, l'accumulator part de cette valeur et le callback commence à l'index 0. Sans initialValue, l'accumulator vaut array[0] et le callback démarre à l'index 1. Sur un tableau vide sans initialValue, reduce() lève une TypeError.",
+      "details": "Cas limites, tirés de la doc : avec un seul élément et sans initialValue, ou avec une initialValue sur un tableau vide, la valeur seule est renvoyée sans jamais appeler le callback.\n\nconst getMax = (a, b) => Math.max(a, b);\n[1, 100].reduce(getMax, 50); // 100\n[1, 100].reduce(getMax); // 100, un seul appel\n[50].reduce(getMax); // 50, callback non appelé\n[].reduce(getMax, 1); // 1, callback non appelé\n[].reduce(getMax); // TypeError\n\nLe callback reçoit (accumulator, currentValue, currentIndex, array). Il n'est pas appelé pour les empty slots (cases vides) d'un sparse array (tableau à trous), et reduce() n'accepte pas de thisArg. La doc rappelle qu'une boucle for...of est souvent plus lisible, et que flat(), Object.groupBy(), find() ou some() conviennent mieux pour aplatir, grouper ou chercher.",
+      "keyPoints": [
+        "Le retour du callback devient l'accumulator de l'appel suivant ; le dernier retour est le résultat",
+        "Callback : (accumulator, currentValue, currentIndex, array)",
+        "Avec initialValue : départ à l'index 0 ; sans : accumulator = array[0], départ à l'index 1",
+        "Tableau vide sans initialValue → TypeError"
+      ],
+      "pitfalls": [
+        "Si on mute l'accumulator, il faut quand même le renvoyer, sinon l'appel suivant reçoit undefined",
+        "Copier l'accumulator à chaque tour (avec le spread) peut rendre l'algorithme quadratique, en O(N²)"
+      ],
+      "source": {
+        "title": "Array.prototype.reduce()",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.iteration.forOfVsForIn",
+      "moduleId": "collections",
+      "kind": "compare",
+      "question": "Quelle différence entre for...of et for...in ?",
+      "answer": "for...in parcourt les clés d'un objet : ses propriétés énumérables à clé string, y compris celles héritées par la prototype chain. for...of parcourt les valeurs que l'objet iterable définit, en appelant son [Symbol.iterator]() puis next() jusqu'à ce que done vaille true. Sur un tableau, for...in renvoie donc les index sous forme de strings, plus toute propriété énumérable ajoutée ou héritée, alors que for...of renvoie les éléments.",
+      "details": "Exemple de la doc (adapté) :\n\nObject.prototype.objCustom = function () {};\nArray.prototype.arrCustom = function () {};\nconst iterable = [3, 5, 7];\niterable.foo = \"hello\";\nfor (const i in iterable) console.log(i);\n// \"0\" \"1\" \"2\" \"foo\" \"arrCustom\" \"objCustom\"\nfor (const i of iterable) console.log(i);\n// 3 5 7\n\nSi un for...of s'interrompt (break, erreur levée), la méthode return() de l'iterator est appelée pour faire le ménage (cleanup). On peut déclarer la variable de boucle avec const tant qu'on ne la réassigne pas dans le corps : chaque itération a sa propre variable.",
+      "keyPoints": [
+        "for...in : clés (propriétés énumérables à clé string), héritées comprises",
+        "for...of : valeurs, via le protocole iterable ([Symbol.iterator]() puis next())",
+        "Sur un tableau : for...in donne \"0\", \"1\", \"2\" + les propriétés ajoutées ou héritées ; for...of donne les éléments",
+        "Object.hasOwn() pour ne garder que les propriétés propres dans un for...in"
+      ],
+      "pitfalls": [
+        "Parcourir un tableau avec for...in : on obtient des index en string et des propriétés parasites venant d'Array.prototype ou d'Object.prototype"
+      ],
+      "source": {
+        "title": "for...of – Difference between for...of and for...in",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#difference_between_for...of_and_for...in"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.collections.mapVsObject",
+      "moduleId": "collections",
+      "kind": "compare",
+      "question": "Quand préférer une Map à un objet littéral pour stocker des paires clé/valeur ?",
+      "answer": "Une Map accepte n'importe quelle valeur comme clé, objet, fonction ou primitive, alors qu'un objet n'a que des clés String ou Symbol. Elle ne contient que ce qu'on y met, sans clés héritées d'un prototype, ce qui la rend sûre avec des clés fournies par l'utilisateur ; elle garantit l'ordre d'insertion, expose size et s'itère directement avec for...of. Elle est aussi plus performante pour les ajouts et suppressions fréquents. L'objet garde l'avantage de la sérialisation native avec JSON.stringify() et JSON.parse().",
+      "details": "Égalité des clés d'une Map : algorithme SameValueZero (NaN est égal à NaN, le reste suit ===), et les clés objets sont comparées par référence, pas par valeur.\n\nCôté objet, les clés héritées du prototype peuvent entrer en collision avec les siennes, et des clés fournies par l'utilisateur peuvent mener à de la prototype pollution (injection de propriétés dans le prototype). Object.create(null) contourne le problème, mais c'est rarement fait. L'ordre des clés d'un objet existe désormais mais il est complexe, et chaque mécanisme (for...in, Object.keys(), Object.getOwnPropertyNames()…) voit un sous-ensemble différent des propriétés : mieux vaut ne pas s'y fier.\n\nUne Map n'a pas de sérialisation native, mais on peut en écrire une avec le replacer de JSON.stringify() et le reviver de JSON.parse().",
+      "keyPoints": [
+        "Clés de Map : n'importe quelle valeur ; clés d'objet : String ou Symbol",
+        "Pas de clés par défaut héritées d'un prototype → sûre avec des clés utilisateur",
+        "Ordre d'insertion garanti, size, itérable directement",
+        "Plus performante pour les ajouts et suppressions fréquents",
+        "Objet : sérialisation JSON native, Map : non"
+      ],
+      "pitfalls": [
+        "map[\"clé\"] = valeur crée une propriété d'objet, pas une entrée : has() et delete() ne la voient pas, il faut passer par set()"
+      ],
+      "source": {
+        "title": "Map – Objects vs. Maps",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map#objects_vs._maps"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.collections.setComposition",
+      "moduleId": "collections",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'un Set, et quelles opérations ensemblistes propose-t-il nativement ?",
+      "answer": "Un Set stocke des valeurs uniques, primitives ou références d'objets, et s'itère dans l'ordre d'insertion ; has() y est en moyenne plus rapide qu'includes() sur un tableau de même taille. Depuis ES2025, union(), intersection(), difference() et symmetricDifference() renvoient un nouveau Set, tandis que isSubsetOf(), isSupersetOf() et isDisjointFrom() renvoient un booléen. Ces méthodes exigent un vrai Set comme this, mais acceptent en argument tout objet set-like, c'est-à-dire qui expose size, has() et keys(), comme une Map.",
+      "details": "Équivalents mathématiques : A.union(B) = A∪B, A.intersection(B) = A∩B, A.difference(B) = A∖B, A.symmetricDifference(B) = (A∖B)∪(B∖A), A.isSubsetOf(B) = A⊆B, A.isSupersetOf(B) = A⊇B, A.isDisjointFrom(B) = A∩B=∅.\n\nconst a = new Set([1, 2, 3]);\nconst b = new Map([[1, \"one\"], [2, \"two\"], [4, \"four\"]]);\nconsole.log(a.union(b)); // Set(4) {1, 2, 3, 4}\n\nUne Map passée en argument se comporte comme l'ensemble de ses clés : le protocole set-like appelle keys() plutôt que [Symbol.iterator](), qui produirait des entrées [clé, valeur].",
+      "keyPoints": [
+        "Valeurs uniques comparées avec SameValueZero (NaN égal à NaN, sinon ===), ordre d'insertion",
+        "union, intersection, difference, symmetricDifference → nouveau Set",
+        "isSubsetOf, isSupersetOf, isDisjointFrom → booléen",
+        "Argument set-like (size, has(), keys()) ; this doit être un vrai Set"
+      ],
+      "pitfalls": [
+        "Passer un tableau en argument ne marche pas : il n'est pas set-like (ni has() ni size, et son keys() renvoie les index), alors qu'une Map passe directement"
+      ],
+      "source": {
+        "title": "Set – Set composition",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set#set_composition"
+      },
+      "since": "ES2025",
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.collections.weakMap",
+      "moduleId": "collections",
+      "kind": "recall",
+      "question": "À quoi sert une WeakMap, et en quoi diffère-t-elle d'une Map ?",
+      "answer": "Une WeakMap associe des valeurs à des clés qui doivent être des objets ou des symbols non enregistrés, sans garder de référence forte sur ces clés : un objet utilisé comme clé peut quand même être garbage collected (libéré par le ramasse-miettes), et sa valeur avec lui. Elle sert à attacher des métadonnées à un objet sans prolonger sa durée de vie, par exemple un état associé à un élément DOM, qui disparaît automatiquement si l'élément est retiré du DOM. En contrepartie, ses clés ne sont pas énumérables : aucune méthode ne permet de les lister ni de l'itérer, sinon le résultat dépendrait de l'état du garbage collector.",
+      "details": "Exemple de la doc : mémoriser quels boutons ont été cliqués sans ajouter de propriété aux éléments.\n\nconst buttons = document.querySelectorAll(\".button\");\nconst clicked = new WeakMap();\nbuttons.forEach((button) => {\n  clicked.set(button, false);\n  button.addEventListener(\"click\", () => {\n    clicked.set(button, true);\n  });\n});\n\nSeul le code qui a accès à clicked connaît l'état, et un bouton retiré du DOM voit ses métadonnées garbage collected. Autres usages cités : émuler des membres privés (une WeakMap partagée par toutes les instances) et mettre en cache le résultat d'une fonction pure par objet d'entrée. Méthodes : get(), set(), has(), delete(), plus getOrInsert() et getOrInsertComputed() depuis ES2026 ; aucune ne liste les clés.",
+      "keyPoints": [
+        "Clés : objets ou symbols non enregistrés uniquement, pas de primitives",
+        "Référence faible : la clé peut être garbage collected, sa valeur suit",
+        "Cas d'usage : métadonnées ou données privées liées à un objet (élément DOM, cache par objet)",
+        "Clés non énumérables : pas d'itération ni de liste des clés (sinon non-déterminisme lié au GC)",
+        "Besoin de lister les clés → utiliser une Map"
+      ],
+      "pitfalls": [
+        "Une Map à la place garde des références fortes : les clés restent en mémoire même quand plus rien d'autre ne les référence (fuite mémoire)",
+        "Un cache en WeakMap ne marche qu'avec des objets en entrée, et le résultat reste en cache tant que l'objet clé est vivant"
+      ],
+      "source": {
+        "title": "WeakMap",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.iteration.iteratorsAndGenerators",
+      "moduleId": "collections",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'un iterable et un iterator en JavaScript, et qu'apporte une generator function (function*) ?",
+      "answer": "Un iterator est un objet doté d'une méthode next() qui renvoie { value, done }, done passant à true quand la séquence est terminée. Un iterable est un objet qui possède une méthode [Symbol.iterator]() renvoyant un iterator : c'est ce qu'attendent for...of, le spread, la destructuration et yield*, et Array, String, Map ou Set le sont nativement. Une generator function, déclarée avec function*, n'exécute pas son corps quand on l'appelle : elle renvoie un Generator, un iterator dont chaque next() reprend l'exécution jusqu'au yield suivant. C'est une alternative aux iterators écrits à la main, avec des valeurs calculées à la demande (on demand), ce qui permet même des séquences infinies.",
+      "details": "Exemple de la doc : un iterable défini avec un générateur.\n\nconst myIterable = {\n  *[Symbol.iterator]() {\n    yield 1;\n    yield 2;\n    yield 3;\n  },\n};\n[...myIterable]; // [1, 2, 3]\n\nGénérateurs avancés : next(value) transmet une valeur que reçoit le yield en attente (la valeur passée au premier next() est toujours ignorée), throw() lève une exception à l'endroit du yield suspendu, et return() termine le générateur en renvoyant la valeur donnée. Un iterable parcourable une seule fois, comme un Generator, renvoie en général this depuis [Symbol.iterator]() ; un iterable réutilisable doit renvoyer un nouvel iterator à chaque appel.",
+      "keyPoints": [
+        "Iterator : next() → { value, done }",
+        "Iterable : méthode [Symbol.iterator]() qui renvoie un iterator (Array, String, Map, Set…)",
+        "Consommé par for...of, le spread, la destructuration et yield*",
+        "function* renvoie un Generator sans exécuter le corps ; chaque next() avance jusqu'au yield suivant",
+        "Valeurs calculées à la demande : séquences coûteuses ou infinies"
+      ],
+      "pitfalls": [
+        "Un Generator ne se parcourt qu'une fois : pour recommencer, il faut rappeler la generator function, qui en renvoie un nouveau"
+      ],
+      "source": {
+        "title": "Iterators and generators",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Iterators_and_generators"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.modules.namedVsDefaultExport",
+      "moduleId": "modules",
+      "kind": "compare",
+      "question": "Quelle différence entre un export nommé et un export par défaut ?",
+      "answer": "Un module peut avoir plusieurs exports nommés, mais un seul export par défaut. Un export nommé s'importe entre accolades sous son nom exact, qu'on peut renommer avec as, alors que l'export par défaut s'importe sans accolades, sous le nom de son choix. La syntaxe export default accepte n'importe quelle expression, et une fonction ou une classe exportée par défaut peut être anonyme ; les exports nommés, eux, servent à exposer plusieurs valeurs.",
+      "details": "Les imports sont des live bindings (liaisons vivantes) : quand le module exportateur modifie une valeur qu'il exporte, la mise à jour est visible côté import.\n\nLes déclarations export ne sont pas soumises à la temporal dead zone (période où une variable let ou const existe mais n'est pas encore accessible) : export { x }; suivi de const x = 1; fonctionne, car export n'est qu'une déclaration. Un fichier qui utilise export doit être interprété comme un module : chargé avec type=\"module\" ou importé par un autre module.",
+      "keyPoints": [
+        "Plusieurs exports nommés, un seul export par défaut par module",
+        "Nommé : import { cube } from \"./m.js\", nom exact (renommage possible avec as)",
+        "Défaut : import cube from \"./m.js\", sans accolades, nom libre",
+        "export default accepte n'importe quelle expression (export default 1 + 1) ; fonction ou classe anonyme possible"
+      ],
+      "pitfalls": [
+        "export * from \"mod\" ré-exporte tous les exports nommés mais pas l'export par défaut : il faut ajouter export { default } from \"mod\""
+      ],
+      "source": {
+        "title": "export",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.modules.moduleVsClassicScript",
+      "moduleId": "modules",
+      "kind": "compare",
+      "question": "Qu'est-ce qui distingue un module JavaScript d'un script classique dans le navigateur ?",
+      "answer": "Un module est en strict mode d'office et différé automatiquement (deferred), sans besoin de l'attribut defer. Ses variables de premier niveau restent dans la portée du module au lieu de devenir globales, même s'il peut lire les globales de la page. Il n'est exécuté qu'une seule fois, même s'il est référencé par plusieurs balises <script>. Enfin, seul un module peut utiliser import et export, et l'ouvrir en file:// provoque des erreurs CORS : il faut passer par un serveur pour tester.",
+      "details": "Un module n'a pas besoin de contenir import ou export : il suffit que le point d'entrée soit chargé avec type=\"module\". Les globales restent visibles depuis le module : une var déclarée dans un script classique de la page est lisible dans le module.\n\nComme les features importées ne sont disponibles que dans le script qui les importe, on ne peut pas y accéder depuis la console DevTools. Les modules inline dans le HTML peuvent importer d'autres modules, mais leurs exports ne sont accessibles à personne, puisqu'ils n'ont pas d'URL.",
+      "keyPoints": [
+        "Strict mode automatique",
+        "Différé automatiquement : defer inutile",
+        "Variables de premier niveau dans la portée du module, pas dans la portée globale",
+        "Exécuté une seule fois, même référencé par plusieurs <script>",
+        "import et export réservés aux modules ; en file:// → erreurs CORS, tester via un serveur"
+      ],
+      "pitfalls": [
+        "Croire qu'une variable déclarée dans un module est accessible depuis la console ou un autre script : elle ne l'est pas, sauf si on l'attache explicitement à l'objet global",
+        "Un import dans un <script> sans type=\"module\" lève une SyntaxError"
+      ],
+      "source": {
+        "title": "JavaScript modules – Other differences between modules and classic scripts",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules#other_differences_between_modules_and_classic_scripts"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.modules.dynamicImport",
+      "moduleId": "modules",
+      "kind": "recall",
+      "question": "Que fait import() (dynamic import), et quand l'utiliser plutôt qu'un import statique ?",
+      "answer": "import() est une expression qui ressemble à un appel de fonction : elle charge un module de façon asynchrone et renvoie une promise résolue avec son module namespace object (l'objet qui regroupe tous ses exports, l'export par défaut étant sous la clé default). On s'en sert pour charger du code à la demande : un module lourd dont on n'a pas besoin tout de suite, un chemin construit dynamiquement, ou des side effects (effets de bord) qu'on ne veut déclencher que sous condition. Elle fonctionne aussi dans un script classique sans type=\"module\". Pour les dépendances initiales, la doc recommande l'import statique, plus facile à analyser statiquement et à tree-shaker (élimination du code inutilisé au build).",
+      "details": "Exemple de la doc : charger un module au clic sur un lien.\n\nfor (const link of document.querySelectorAll(\"nav > a\")) {\n  link.addEventListener(\"click\", (e) => {\n    e.preventDefault();\n    import(\"/modules/my-module.js\")\n      .then((module) => module.loadPageInto(main))\n      .catch((err) => {\n        main.textContent = err.message;\n      });\n  });\n}\n\nPour récupérer l'export par défaut, on le renomme en destructurant, car default est un mot réservé : const { default: myDefault, foo } = await import(\"/modules/my-module.js\"). Le namespace object est mis en cache : import * as mod et import() du même module donnent le même objet. import() est disponible dans le main thread et les workers dédiés ou partagés, mais lève une erreur dans les service workers et les worklets.",
+      "keyPoints": [
+        "Renvoie une promise du module namespace object (export par défaut dans .default)",
+        "Chargement à la demande : code lourd pas encore utile, réaction à une action utilisateur",
+        "Accepte un chemin construit dynamiquement (template string, condition d'environnement)",
+        "Fonctionne aussi hors module (script classique, eval)",
+        "Pour les dépendances initiales, préférer l'import statique (analyse statique, tree-shaking)"
+      ],
+      "pitfalls": [
+        "import n'est pas une fonction : on ne peut pas l'aliaser, const myImport = import lève une SyntaxError",
+        "import() ne lève jamais d'erreur de façon synchrone : un module introuvable ou qui plante à l'évaluation donne une promise rejetée, à gérer avec catch() ou try/await"
+      ],
+      "source": {
+        "title": "import()",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "javascript.modules.topLevelAwait",
+      "moduleId": "modules",
+      "kind": "recall",
+      "question": "Que permet le top-level await dans un module, et quel effet a-t-il sur les modules qui l'importent ?",
+      "answer": "Dans un module, on peut utiliser await directement au niveau racine, hors de toute fonction async : le module se comporte alors comme une grosse fonction asynchrone. Un module qui en importe un autre utilisant top-level await attend que celui-ci ait fini de s'exécuter avant de lancer son propre code, ce qui garantit par exemple que des données chargées par fetch sont prêtes. En revanche, ça ne bloque pas les autres modules frères (sibling modules), qui continuent de se charger pendant ce temps.",
+      "details": "Exemple de la doc :\n\n// getColors.js\nconst colors = fetch(\"../data/colors.json\")\n  .then((response) => response.json());\nexport default await colors;\n// main.js : ne s'exécute qu'une fois colors prêt\nimport colors from \"./modules/getColors.js\";\nimport { Canvas } from \"./modules/canvas.js\";\n\nPendant que colors.json est récupéré, canvas.js, importé lui aussi par main.js, continue de se charger.",
+      "keyPoints": [
+        "await autorisé au niveau racine d'un module, hors fonction async",
+        "Disponible uniquement dans les modules",
+        "Les modules qui l'importent attendent la fin de son exécution avant de s'exécuter",
+        "Les modules frères ne sont pas bloqués et continuent de se charger",
+        "Cas typique : export default await d'une donnée récupérée par fetch"
+      ],
+      "pitfalls": [
+        "Un await lent au top level retarde l'exécution de tous les modules qui en dépendent"
+      ],
+      "source": {
+        "title": "JavaScript modules – Top level await",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules#top_level_await"
+      },
+      "since": "ES2022",
+      "difficulty": 3
+    },
+    {
+      "id": "javascript.events.propagationPhases",
+      "moduleId": "dom",
+      "kind": "recall",
+      "question": "Dans quel ordre un événement traverse-t-il le DOM ? Décris les phases de propagation.",
+      "answer": "Un événement passe d'abord par la phase de capture, où il est transmis aux listeners de capture des ancêtres avant d'atteindre les éléments situés en dessous dans l'arbre, puis par la target phase sur l'élément cible lui-même, et enfin par le bubbling, où il remonte l'arbre. Par défaut, addEventListener enregistre le listener hors capture (capture vaut false), donc il se déclenche pendant la target phase ou le bubbling. Pour écouter pendant la capture, on passe { capture: true } ou useCapture à true : ces listeners sont appelés avant ceux de la target phase et du bubbling.",
+      "details": "addEventListener est la façon recommandée d'enregistrer un listener : il permet plusieurs handlers pour un même événement et, contrairement aux propriétés onXYZ (onclick…), il permet de choisir la phase, capture ou bubbling.\n\nLes autres options : once (listener retiré après son premier appel), passive (promesse de ne jamais appeler preventDefault(), ce qui laisse le navigateur lancer l'action par défaut, comme le scroll, sans attendre le listener) et signal (un AbortSignal qui retire le listener quand on appelle abort() sur son AbortController).",
+      "keyPoints": [
+        "Capture : des ancêtres vers la cible",
+        "Target phase : listeners attachés à l'élément cible",
+        "Bubbling : remontée de la cible vers le haut de l'arbre",
+        "Par défaut capture = false ; { capture: true } pour écouter pendant la capture",
+        "Listeners de capture appelés avant ceux de la target phase et du bubbling"
+      ],
+      "pitfalls": [
+        "Un listener enregistré en capture n'est pas redéclenché quand l'événement remonte en bubbling"
+      ],
+      "source": {
+        "title": "EventTarget: addEventListener() method",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.events.delegation",
+      "moduleId": "dom",
+      "kind": "recall",
+      "question": "Qu'est-ce que l'event delegation, et pourquoi l'utiliser ?",
+      "answer": "L'event delegation consiste à poser un seul listener sur un parent plutôt qu'un listener sur chacun de ses nombreux enfants, en s'appuyant sur le bubbling : un clic sur un enfant remonte jusqu'au parent, dont le handler s'exécute. Dans ce handler, event.target désigne l'élément sur lequel l'événement a eu lieu, alors qu'event.currentTarget désigne l'élément qui porte le listener, ici le parent. C'est plus simple et plus efficace que d'attacher un handler à chaque enfant.",
+      "details": "Exemple de la doc : une page découpée en 16 tuiles, chacune prenant une couleur aléatoire quand on clique dessus, avec un seul listener sur le conteneur.\n\nconst container = document.querySelector(\"#container\");\ncontainer.addEventListener(\"click\", (event) => {\n  event.target.style.backgroundColor = bgChange();\n});\n\nPendant la remontée, target reste le même, alors que currentTarget change selon l'élément dont le handler est en train de s'exécuter.",
+      "keyPoints": [
+        "Un seul listener sur le parent au lieu d'un par enfant",
+        "Repose sur le bubbling des événements des enfants vers le parent",
+        "event.target = élément d'origine (l'enfant cliqué)",
+        "event.currentTarget = élément qui porte le listener (le parent)",
+        "Plus simple et plus efficace que N listeners"
+      ],
+      "pitfalls": [
+        "Utiliser currentTarget au lieu de target dans un listener délégué : currentTarget désigne toujours le parent, pas l'enfant cliqué"
+      ],
+      "source": {
+        "title": "Event bubbling – Event delegation",
+        "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Event_bubbling#event_delegation"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.events.preventDefaultVsStopPropagation",
+      "moduleId": "dom",
+      "kind": "compare",
+      "question": "Quelle différence entre event.preventDefault() et event.stopPropagation() ?",
+      "answer": "preventDefault() empêche l'action par défaut du navigateur, par exemple suivre un lien sur lequel on a cliqué. stopPropagation() arrête la propagation de l'événement pendant les phases de capture et de bubbling, mais n'empêche aucune action par défaut : un clic sur un lien est quand même traité. Il n'empêche pas non plus les autres handlers du même élément de s'exécuter ; pour cela, il faut stopImmediatePropagation().",
+      "keyPoints": [
+        "preventDefault() : annule l'action par défaut, comme suivre un lien",
+        "stopPropagation() : stoppe la propagation (capture et bubbling)",
+        "stopPropagation() n'empêche pas l'action par défaut",
+        "Les autres handlers du même élément s'exécutent quand même → stopImmediatePropagation()"
+      ],
+      "pitfalls": [
+        "Appeler stopPropagation() pour empêcher un lien de naviguer : ça ne marche pas, c'est le rôle de preventDefault()"
+      ],
+      "source": {
+        "title": "Event: stopPropagation() method",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/API/Event/stopPropagation"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.dom.scriptAsyncVsDefer",
+      "moduleId": "dom",
+      "kind": "compare",
+      "question": "Quelle différence entre <script async> et <script defer>, et comment se comporte un <script type=\"module\"> ?",
+      "answer": "Sans attribut, un script bloque le parsing : le navigateur le télécharge et l'exécute avant de continuer à lire la page. Avec async comme avec defer, le script est téléchargé en parallèle du parsing, mais async l'exécute dès qu'il est prêt, sans garantie d'ordre, alors que defer attend la fin du parsing, s'exécute avant DOMContentLoaded et respecte l'ordre du document. Un script type=\"module\" est différé par défaut, donc defer n'a aucun effet dessus, mais on peut lui ajouter async pour qu'il s'exécute, avec ses dépendances, dès qu'il est disponible.",
+      "details": "Règle de la doc : async pour des scripts indépendants qui ne dépendent d'aucun autre script de la page, defer pour ceux qui ont besoin du DOM en place ou d'autres scripts, en plaçant les balises dans l'ordre d'exécution voulu. Une fois téléchargé, un script async s'exécute tout de suite, ce qui bloque le rendu de la page pendant son exécution.\n\nSi async et defer sont présents ensemble, l'élément se comporte comme s'il n'avait qu'async. Un script defer retarde DOMContentLoaded jusqu'à la fin de son exécution. L'attribut nomodule sert un script de repli aux navigateurs qui ne supportent pas les modules : <script type=\"module\" src=\"main.js\"></script> à côté de <script nomodule src=\"fallback.js\"></script>.",
+      "keyPoints": [
+        "Par défaut : parser-blocking (téléchargé et exécuté avant de continuer le parsing)",
+        "async : téléchargement en parallèle, exécution dès que prêt, ordre non garanti",
+        "defer : téléchargement en parallèle, exécution après le parsing, avant DOMContentLoaded, dans l'ordre du document",
+        "type=\"module\" : différé par défaut (defer sans effet), async possible",
+        "async pour des scripts indépendants, defer pour ceux qui dépendent du DOM ou d'autres scripts"
+      ],
+      "pitfalls": [
+        "Sur un script classique inline (sans src), async et defer n'ont aucun effet",
+        "Charger en async un script qui dépend d'un autre (jquery.js, par exemple) : il peut s'exécuter avant sa dépendance et planter"
+      ],
+      "source": {
+        "title": "<script> HTML script element",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "javascript.events.debounceVsThrottle",
+      "moduleId": "dom",
+      "kind": "compare",
+      "question": "Quelle différence entre debounce et throttle ?",
+      "answer": "Les deux limitent l'exécution d'une fonction appelée en rafale, comme un handler de scroll. Le throttle garantit que, tant que les appels continuent, l'opération s'exécute quand même, mais au plus à un rythme maximum, par exemple une fois toutes les 10 millisecondes. Le debounce, lui, attend que les appels s'arrêtent pendant une durée donnée avant d'exécuter, aussi longtemps qu'il le faut. Le throttle convient donc quand l'effet doit continuer à s'appliquer pendant le flux, comme déplacer un élément pendant le scroll.",
+      "details": "Exemple de la doc : onScrolled écoute l'événement scroll, qui peut se déclencher à chaque pixel défilé. S'il est coûteux, les appels peuvent se retarder les uns les autres et provoquer du jank (saccades visibles). Avec un throttle de 10 ms, le premier appel est le leading edge (début du lot), les appels des 10 ms suivantes font partie du même lot, puis on atteint le trailing edge (fin de l'intervalle).\n\nUn throttle exécute généralement sur le leading edge seulement, parfois sur le trailing edge ou sur les deux selon le besoin. L'effet reste appliqué en continu pendant le scroll, sans être exécuté plus souvent que nécessaire.",
+      "keyPoints": [
+        "Throttle : au plus une exécution par intervalle, même si les appels continuent",
+        "Debounce : attend une pause d'une durée donnée dans les appels, puis exécute",
+        "Throttle : l'effet continue de s'appliquer pendant le flux (scroll)",
+        "Leading edge = début du lot, trailing edge = fin ; le throttle exécute en général sur le leading edge"
+      ],
+      "pitfalls": [
+        "Un debounce sur un flux d'appels qui ne s'arrête pas n'exécute rien tant que dure le flux : il attend indéfiniment la pause"
+      ],
+      "source": {
+        "title": "Throttle",
+        "url": "https://developer.mozilla.org/en-US/docs/Glossary/Throttle"
+      },
+      "difficulty": 2
+    }
+  ]
+}

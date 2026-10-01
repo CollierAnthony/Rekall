@@ -65,6 +65,18 @@ describe('TodayReview', () => {
     expect(snapshot.unseenCount).toBe(2);
   });
 
+  it('ignore la progression d’une carte qui n’existe plus dans les decks', async () => {
+    const { todayReview, saved } = createTodayReview();
+    const removedCard = aCard('removed');
+    await todayReview.rate(removedCard, undefined, 'hard', now); // due demain
+
+    const snapshot = await todayReview.loadToday(now);
+
+    expect(snapshot.progressByCardId.has(removedCard.id)).toBe(false);
+    expect(snapshot.dueTomorrow).toBe(0);
+    expect(snapshot.unseenCount).toBe(2);
+  });
+
   it('enregistre la progression correspondant à la note donnée', async () => {
     const { todayReview, saved } = createTodayReview();
 

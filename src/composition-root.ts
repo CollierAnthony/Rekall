@@ -10,7 +10,7 @@ import { ArtifactDbProgressRepository } from './infrastructure/progress/artifact
 import { LocalStorageProgressRepository } from './infrastructure/progress/local-storage-progress-repository';
 import { FsrsScheduler } from './infrastructure/scheduling/fsrs-scheduler';
 
-const NEW_CARDS_PER_DAY = 10;
+const NEW_CARDS_PER_DAY = 15;
 
 /** synced : base de l'artefact, partagée entre appareils ; this-device : navigateur uniquement. */
 export type StorageMode = 'synced' | 'this-device';

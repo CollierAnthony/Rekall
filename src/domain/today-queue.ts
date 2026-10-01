@@ -1,4 +1,4 @@
-import type { Card } from './deck';
+import type { Card, Deck } from './deck';
 import type { CardProgress } from './review';
 
 export type TodayPolicy = {
@@ -41,16 +41,20 @@ export function startOfNextReviewDay(date: Date): Date {
 /**
  * Compose la file du jour : d'abord les cartes déjà vues dont l'échéance tombe
  * avant la fin de la journée de révision (les plus en retard en tête), puis de
- * nouvelles cartes jusqu'à la limite quotidienne, par difficulté puis dans
- * l'ordre du deck.
+ * nouvelles cartes jusqu'à la limite quotidienne.
+ *
+ * Les nouvelles cartes sortent deck par deck, dans l'ordre de l'index : un deck
+ * n'en fournit que lorsque les précédents sont entièrement vus. Dans un deck,
+ * elles sortent par difficulté, puis dans l'ordre du fichier.
  */
 export function composeTodayQueue(
-  cards: readonly Card[],
+  decks: readonly Deck[],
   progressByCardId: ReadonlyMap<string, CardProgress>,
   now: Date,
   policy: TodayPolicy,
 ): TodayQueue {
   const endOfReviewDay = startOfNextReviewDay(now);
+  const cards = decks.flatMap((deck) => deck.cards);
 
   const dueCards = cards
     .flatMap((card) => {
@@ -60,14 +64,20 @@ export function composeTodayQueue(
     .sort((first, second) => first.dueAt.getTime() - second.dueAt.getTime())
     .map(({ card }) => card);
 
-  const newCards = cards
-    .map((card, deckPosition) => ({ card, deckPosition }))
-    .filter(({ card }) => !progressByCardId.has(card.id))
-    .sort((first, second) => first.card.difficulty - second.card.difficulty || first.deckPosition - second.deckPosition)
-    .slice(0, remainingNewCards(progressByCardId, now, policy))
-    .map(({ card }) => card);
+  const newCards = decks
+    .flatMap((deck) => unseenCardsInIntroductionOrder(deck, progressByCardId))
+    .slice(0, remainingNewCards(progressByCardId, now, policy));
 
   return { pending: [...dueCards, ...newCards], reviewedCount: 0 };
+}
+
+/** Cartes jamais vues d'un deck, par difficulté puis dans l'ordre du fichier. */
+function unseenCardsInIntroductionOrder(deck: Deck, progressByCardId: ReadonlyMap<string, CardProgress>): Card[] {
+  return deck.cards
+    .map((card, filePosition) => ({ card, filePosition }))
+    .filter(({ card }) => !progressByCardId.has(card.id))
+    .sort((first, second) => first.card.difficulty - second.card.difficulty || first.filePosition - second.filePosition)
+    .map(({ card }) => card);
 }
 
 /** Nouvelles cartes encore autorisées : la limite moins celles introduites depuis le début de la journée de révision. */
