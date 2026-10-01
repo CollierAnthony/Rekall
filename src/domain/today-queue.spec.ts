@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, CardDifficulty } from './deck';
 import type { CardProgress } from './review';
-import { advanceTodayQueue, composeTodayQueue, countDueTomorrow } from './today-queue';
+import { advanceTodayQueue, composeTodayQueue, countDueTomorrow, startOfNextReviewDay, startOfReviewDay } from './today-queue';
 
-// Dates locales : la notion de « journée » suit le fuseau du navigateur.
+// Dates locales : la journée de révision commence à 4 h dans le fuseau du navigateur.
 const now = new Date(2026, 9, 1, 9, 0);
-const at = (day: number, hour: number): Date => new Date(2026, 9, day, hour, 0);
-const september = (day: number): Date => new Date(2026, 8, day, 9, 0);
+const at = (day: number, hour: number, minute = 0): Date => new Date(2026, 9, day, hour, minute);
+const september = (day: number, hour = 9): Date => new Date(2026, 8, day, hour, 0);
 
 const aCard = (name: string, difficulty: CardDifficulty = 1): Card => ({
   id: `react.${name}`,
@@ -32,6 +32,23 @@ const aProgress = (card: Card, dueAt: Date, introducedAt: Date = september(20)):
 const progressMap = (...progress: CardProgress[]): Map<string, CardProgress> => new Map(progress.map((p) => [p.cardId, p]));
 const ids = (cards: readonly Card[]): string[] => cards.map((card) => card.id);
 
+describe('startOfReviewDay', () => {
+  it('renvoie 4 h la veille pour une date à 3 h 59', () => {
+    expect(startOfReviewDay(at(1, 3, 59))).toEqual(september(30, 4));
+  });
+
+  it('renvoie 4 h le jour même pour une date à 4 h pile', () => {
+    expect(startOfReviewDay(at(1, 4))).toEqual(at(1, 4));
+  });
+});
+
+describe('startOfNextReviewDay', () => {
+  it('renvoie 4 h heure locale le lendemain, y compris la nuit du passage à l’heure d’hiver', () => {
+    // En Europe, l’heure d’hiver commence le 25 octobre 2026 : la journée du 24 dure 25 h.
+    expect(startOfNextReviewDay(at(24, 9))).toEqual(at(25, 4));
+  });
+});
+
 describe('composeTodayQueue', () => {
   it('place les cartes dues aujourd’hui en tête, les plus en retard d’abord, puis les nouvelles', () => {
     const [dueLate, dueEarly, dueTonight, unseen] = [aCard('a'), aCard('b'), aCard('c'), aCard('d')];
@@ -46,12 +63,25 @@ describe('composeTodayQueue', () => {
     expect(ids(queue.pending)).toEqual(['react.b', 'react.a', 'react.c', 'react.d']);
   });
 
-  it('laisse de côté les cartes dont l’échéance tombe demain ou plus tard', () => {
-    const tomorrow = aCard('tomorrow');
+  it('garde une carte due à minuit pile mais laisse de côté celles dues à partir de 4 h le lendemain', () => {
+    const [midnight, nextReviewDay] = [aCard('midnight'), aCard('next-review-day')];
 
-    const queue = composeTodayQueue([tomorrow], progressMap(aProgress(tomorrow, at(2, 0))), now, { newCardsPerDay: 10 });
+    const queue = composeTodayQueue(
+      [midnight, nextReviewDay],
+      progressMap(aProgress(midnight, at(2, 0)), aProgress(nextReviewDay, at(2, 4))),
+      now,
+      { newCardsPerDay: 10 },
+    );
 
-    expect(queue.pending).toEqual([]);
+    expect(ids(queue.pending)).toEqual(['react.midnight']);
+  });
+
+  it('inclut une carte due à 3 h du matin quand on révise la veille au soir', () => {
+    const dueAt3am = aCard('due-at-3am');
+
+    const queue = composeTodayQueue([dueAt3am], progressMap(aProgress(dueAt3am, at(2, 3))), at(1, 21), { newCardsPerDay: 10 });
+
+    expect(ids(queue.pending)).toEqual(['react.due-at-3am']);
   });
 
   it('limite les nouvelles cartes en comptant celles déjà introduites aujourd’hui', () => {
@@ -66,6 +96,34 @@ describe('composeTodayQueue', () => {
     );
 
     expect(ids(queue.pending)).toEqual(['react.n1', 'react.n2']);
+  });
+
+  it('ne décompte pas du quota du jour une carte introduite à 1 h du matin, rattachée à la journée de la veille', () => {
+    const introducedAt1am = aCard('seen-at-1am');
+    const unseen = [aCard('n1'), aCard('n2')];
+
+    const queue = composeTodayQueue(
+      [introducedAt1am, ...unseen],
+      progressMap(aProgress(introducedAt1am, at(5, 9), at(1, 1))),
+      now,
+      { newCardsPerDay: 2 },
+    );
+
+    expect(ids(queue.pending)).toEqual(['react.n1', 'react.n2']);
+  });
+
+  it('décompte du quota de la veille une carte introduite la veille au soir quand on révise encore à 1 h du matin', () => {
+    const introducedLastEvening = aCard('seen-last-evening');
+    const unseen = [aCard('n1'), aCard('n2')];
+
+    const queue = composeTodayQueue(
+      [introducedLastEvening, ...unseen],
+      progressMap(aProgress(introducedLastEvening, at(5, 9), september(30, 22))),
+      at(1, 1),
+      { newCardsPerDay: 2 },
+    );
+
+    expect(ids(queue.pending)).toEqual(['react.n1']);
   });
 
   it('présente les nouvelles cartes par difficulté, puis dans l’ordre du deck', () => {
@@ -85,7 +143,11 @@ describe('advanceTodayQueue', () => {
     expect(advanceTodayQueue(queue, at(1, 9), now)).toEqual({ pending: [second, first], reviewedCount: 1 });
   });
 
-  it('retire la carte si sa prochaine échéance est un autre jour', () => {
+  it('remet la carte en fin de file si elle revient après minuit mais avant 4 h', () => {
+    expect(advanceTodayQueue(queue, at(2, 1), at(1, 23, 50))).toEqual({ pending: [second, first], reviewedCount: 1 });
+  });
+
+  it('retire la carte si sa prochaine échéance tombe dans une autre journée de révision', () => {
     expect(advanceTodayQueue(queue, at(4, 9), now)).toEqual({ pending: [second], reviewedCount: 1 });
   });
 });
@@ -100,5 +162,28 @@ describe('countDueTomorrow', () => {
     );
 
     expect(count).toBe(1);
+  });
+
+  it('compte les cartes dues pendant la journée de révision suivante, de 4 h à 4 h', () => {
+    const [stillToday, tomorrowStart, tomorrowAfterMidnight, tomorrowLastMinute, afterTomorrow] = [
+      aCard('a'),
+      aCard('b'),
+      aCard('c'),
+      aCard('d'),
+      aCard('e'),
+    ];
+
+    const count = countDueTomorrow(
+      progressMap(
+        aProgress(stillToday, at(2, 3)),
+        aProgress(tomorrowStart, at(2, 4)),
+        aProgress(tomorrowAfterMidnight, at(3, 1)),
+        aProgress(tomorrowLastMinute, at(3, 3, 59)),
+        aProgress(afterTomorrow, at(3, 4)),
+      ),
+      now,
+    );
+
+    expect(count).toBe(3);
   });
 });
