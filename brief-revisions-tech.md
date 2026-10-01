@@ -1,6 +1,25 @@
-# Brief — Rekall, appli de révision tech (React d'abord)
+# Brief — Rekall, appli d'apprentissage tech personnelle
 
 Document de référence du Projet « Révisions tech ». À lire avant toute proposition.
+
+## Vision (01/10/2026)
+
+Rekall ne sert pas qu'à réviser des cartes : c'est une **application complète d'apprentissage, pour mon usage personnel**. J'ai plusieurs heures par jour à y consacrer dans les jours qui viennent ; les 15 minutes de cartes quotidiennes ne suffisent pas. Pas d'entretien prévu pour l'instant.
+
+Deux axes, séparés :
+- **Catégories** (React, JavaScript, TypeScript, Node, NestJS, Next.js, tests, architecture, entretiens…) : du **contenu**. On en ajoute librement, sans toucher au code, via l'index du contenu.
+- **Types de contenu** : du **code**, écrit une fois, qui sert toutes les catégories.
+  - **Cartes** : répétition espacée (existant).
+  - **Bibliothèque** : parcourir et chercher toutes les cartes par catégorie, sans attendre qu'elles sortent en révision.
+  - **Pratique** : exercices et mini-projets réalistes (inspirés de mes projets pro, logistique et transport), avec un énoncé, les cartes liées, un statut, mes notes et une code review par Claude. Les projets restent privés (pas de GitHub public nécessaire).
+  - **Guides** : un concept complet expliqué d'un bloc, avec des vérifications en cours de route.
+  - **Entretien** : existant.
+  - **Progression** : plus tard.
+- **Navigation** : barre en bas sur téléphone (Aujourd'hui, Bibliothèque, Pratique, Guides).
+- **Ordre** :
+  - UX/UI : refonte en cours, maquettée avec Claude Design (« quelque chose de beau qui tienne la route »), puis implémentée.
+  - Contenu : deck JavaScript, puis TypeScript, puis Node.
+  - Sections : Bibliothèque, puis Pratique et Guides.
 
 ## Le problème à résoudre
 
@@ -10,7 +29,7 @@ Principe retenu : **rappel actif + répétition espacée**. Pas de QCM comme for
 
 ## Décisions prises
 
-- **Modes** : révision du jour (cartes + répétition espacée), mode entretien, défis de code. Pas de QCM pour l'instant.
+- **Modes** : révision du jour (cartes + répétition espacée), mode entretien, puis Bibliothèque, Pratique et Guides (voir Vision). Pas de QCM pour l'instant.
 - **Correction** : auto-évaluation au quotidien (raté / difficile / bon / facile) ; Claude corrige en mode entretien.
 - **Support** : téléphone et ordinateur, progression synchronisée.
 - **Langue des cartes** : explications en français, termes techniques en anglais (cleanup, re-render, deps…).
@@ -18,7 +37,7 @@ Principe retenu : **rappel actif + répétition espacée**. Pas de QCM comme for
 - **Source de vérité** : le dossier local `App Revisions` (code de l'appli + decks). L'artefact est publié à partir de ce dossier.
 - **Ordre de travail** (décidé le 30/09/2026) : le contenu d'abord, l'outil ensuite. Le deck React v1 est utilisable dès le premier jour sans appli, via « interroge-moi » dans le chat du Projet, qui tient lieu de mode entretien avec correction.
 - **Périmètre du MVP** : uniquement l'écran « Aujourd'hui » + « Signaler une carte ». Mode entretien dans l'appli et écran Progression : plus tard, une fois que je révise régulièrement. La progression est stockée dès le premier jour, donc rien n'est perdu.
-- **Maquette** : au plus une esquisse rapide de l'écran « Aujourd'hui ».
+- **Maquette** : V1 sans maquette (design utilitaire). Depuis le 01/10/2026, refonte maquettée dans Claude Design, validée avant implémentation.
 
 ## Architecture
 
@@ -111,11 +130,16 @@ Estimation : 150 à 200 cartes au total. **Deck v1 : ~60 cartes, les classiques 
 - **Patterns** : composition et `children`, contrôlé vs non contrôlé, error boundaries, portals.
 - **Tests** : principes de Testing Library.
 
-Decks suivants : TanStack Query (query keys, `staleTime` vs `gcTime`, invalidation, mutations, optimistic updates, infinite queries, Suspense), puis TanStack Router, Table, Form, puis React Hook Form, Zod, Zustand. Ensuite d'autres technos (Vue, TypeScript, NestJS…).
+Decks suivants (décidé le 01/10/2026) : les bases avant les librairies annexes. **JavaScript** (source MDN), puis **TypeScript** (typescriptlang.org), puis **Node**. Ensuite NestJS, Next.js, tests, architecture ; TanStack, React Hook Form, Zod, Zustand passent après.
+
+Quand un deuxième deck arrive :
+- les nouvelles cartes sont introduites deck par deck (ordre de l'index, puis difficulté, puis ordre du fichier) ;
+- la progression d'une carte qui n'existe plus n'est plus comptée (cartes vues, échéances de demain) ;
+- le quota de nouvelles cartes par jour peut monter (~15).
 
 ## Garde-fou
 
-L'appli est un moyen, pas le but : sortir le MVP en une ou deux sessions, puis enrichir les decks au fil de l'eau, plutôt que de peaufiner l'outil au lieu de réviser.
+L'appli est un moyen, pas le but. Recalibré le 01/10/2026 avec la vision « appli complète » : chaque section sort **avec son contenu**, jamais comme une coquille vide, et je révise en parallèle de chaque chantier sur l'outil.
 
 ## V1 (01/10/2026)
 
@@ -128,4 +152,7 @@ Retours de la première utilisation, traités :
 
 1. ~~Deck React v1 (~60 cartes)~~ Fait le 01/10/2026 : 60 cartes dans `public/decks/react.json` (Effets & refs 12, Performance 9, État 9, Fondamentaux 8, React 19 9, Patterns 5, Server 5, Tests 3), révisables via « interroge-moi ».
 2. ~~MVP : moteur + écran « Aujourd'hui » + « Signaler une carte », publié en artefact.~~ Fait le 01/10/2026.
-3. Compléter React, puis TanStack Query. Mode entretien et Progression dans l'appli quand je révise régulièrement.
+3. ~~Mode entretien dans l'appli.~~ Fait le 01/10/2026.
+4. Refonte UX/UI : maquette dans Claude Design, puis implémentation (navigation basse, écrans existants).
+5. Deck JavaScript, puis deck TypeScript.
+6. Section Bibliothèque, puis Pratique et Guides.
