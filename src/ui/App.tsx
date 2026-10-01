@@ -1,7 +1,7 @@
 import { Suspense, use } from 'react';
 import type { AppContext } from '../composition-root';
 import { ErrorBoundary } from './ErrorBoundary';
-import { TodayScreen } from './today/TodayScreen';
+import { Home } from './Home';
 
 type AppProps = {
   readonly appContext: Promise<AppContext>;
@@ -21,7 +21,7 @@ export function App({ appContext }: AppProps) {
 
 function LoadedApp({ appContext }: AppProps) {
   const context = use(appContext);
-  return <TodayScreen {...context} />;
+  return <Home {...context} />;
 }
 
 function LoadFailure({ error }: { readonly error: Error }) {

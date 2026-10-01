@@ -80,5 +80,10 @@ export function useTodaySession(todayReview: TodayReview, snapshot: TodaySnapsho
     remainingReviewCount: state.queue.pending.filter((card) => !isNew(card)).length,
     dueTomorrow: countDueTomorrow(state.progressByCardId, loadedAt),
     unseenCount: allCards.filter(isNew).length,
+    seenCardCount: state.progressByCardId.size,
+    progressByCardId: state.progressByCardId,
+    cards: allCards,
   };
 }
+
+export type TodaySession = ReturnType<typeof useTodaySession>;

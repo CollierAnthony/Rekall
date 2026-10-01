@@ -1,44 +1,22 @@
-import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
-import type { TodayReview, TodaySnapshot } from '../../application/today-review';
-import type { StorageMode } from '../../composition-root';
+import { useEffect, useEffectEvent, useRef } from 'react';
+import type { TodayReview } from '../../application/today-review';
 import { RATINGS, type Rating } from '../../domain/review';
-import { startOfReviewDay } from '../../domain/today-queue';
-import { formatDay } from '../format';
 import { ReviewCard, type CardContext } from './ReviewCard';
 import { SessionProgress } from './SessionProgress';
 import { SessionSummary } from './SessionSummary';
-import { StorageStatus } from './StorageStatus';
-import { useReloadOnNewReviewDay } from './useReloadOnNewReviewDay';
-import { useTodaySession } from './useTodaySession';
+import type { TodaySession } from './useTodaySession';
 
 type TodayScreenProps = {
+  readonly session: TodaySession;
   readonly todayReview: TodayReview;
-  readonly storageMode: StorageMode;
-  readonly snapshot: TodaySnapshot;
-  readonly loadedAt: Date;
+  readonly cardContexts: ReadonlyMap<string, CardContext>;
   readonly newCardsPerDay: number;
 };
 
 const RATING_BY_KEY: Readonly<Record<string, Rating>> = Object.fromEntries(RATINGS.map((rating, index) => [String(index + 1), rating]));
 
-export function TodayScreen({ todayReview, storageMode, snapshot, loadedAt, newCardsPerDay }: TodayScreenProps) {
-  const session = useTodaySession(todayReview, snapshot, loadedAt);
-  useReloadOnNewReviewDay(loadedAt);
+export function TodayScreen({ session, todayReview, cardContexts, newCardsPerDay }: TodayScreenProps) {
   const cardTopRef = useRef<HTMLDivElement>(null);
-
-  const cardContexts = useMemo(
-    () =>
-      new Map(
-        snapshot.decks.flatMap((deck) => {
-          const moduleTitles = new Map(deck.modules.map((deckModule) => [deckModule.id, deckModule.title]));
-          return deck.cards.map((card): [string, CardContext] => [
-            card.id,
-            { deckTitle: deck.title, moduleTitle: moduleTitles.get(card.moduleId) ?? card.moduleId },
-          ]);
-        }),
-      ),
-    [snapshot.decks],
-  );
 
   async function rateAndScroll(rating: Rating): Promise<void> {
     if (await session.rate(rating)) {
@@ -77,15 +55,7 @@ export function TodayScreen({ todayReview, storageMode, snapshot, loadedAt, newC
   const cardContext = card === undefined ? undefined : cardContexts.get(card.id);
 
   return (
-    <main className="today">
-      <header className="today__header">
-        <div>
-          <p className="today__date">{formatDay(startOfReviewDay(loadedAt))}</p>
-          <h1 className="today__title">Aujourd’hui</h1>
-        </div>
-        <StorageStatus mode={storageMode} />
-      </header>
-
+    <div className="today">
       <SessionProgress
         reviewedCount={session.reviewedCount}
         remainingReviewCount={session.remainingReviewCount}
@@ -114,6 +84,6 @@ export function TodayScreen({ todayReview, storageMode, snapshot, loadedAt, newC
           />
         )}
       </div>
-    </main>
+    </div>
   );
 }
