@@ -65,7 +65,7 @@
       "moduleId": "effects-refs",
       "kind": "recall",
       "question": "À quoi sert useEffect ?",
-      "answer": "useEffect permet de synchroniser un composant avec un système externe à React : une API du navigateur, un widget tiers, le réseau, une connexion à un serveur. Son code s'exécute après le commit, une fois l'écran mis à jour, et non pendant le rendu. Un effet est causé par le rendu lui-même, pas par une interaction : sans système externe à synchroniser, on n'en a probablement pas besoin.",
+      "answer": "useEffect permet de synchroniser un composant avec un système externe à React : une API du navigateur, un widget tiers, le réseau, une connexion à un serveur. Son code s'exécute après le commit (quand React a appliqué les changements au DOM), une fois l'écran mis à jour, et non pendant le rendu. Un effet est causé par le rendu lui-même, pas par une interaction : sans système externe à synchroniser, on n'en a probablement pas besoin.",
       "details": "La doc distingue trois types de code : le rendu (pur, il calcule le JSX), les event handlers (side effects causés par une interaction précise) et les effets (side effects causés par le rendu). Exemple : se connecter au serveur d'un chat est un effet, car ça doit arriver dès que le composant est affiché ; envoyer un message est un événement, causé par le clic sur le bouton.",
       "keyPoints": [
         "Synchroniser le composant avec un système externe (browser API, widget tiers, réseau)",
@@ -85,7 +85,7 @@
       "kind": "recall",
       "question": "À quoi sert la fonction retournée par un useEffect ?",
       "answer": "C'est la cleanup function : elle arrête ou annule ce que le setup a mis en place, par exemple fermer une connexion ou ignorer la réponse d'une requête en cours. React l'appelle avant chaque nouvelle exécution de l'effet, avec les anciennes props et l'ancien state, puis une dernière fois quand le composant est retiré (unmount).",
-      "details": "Déroulé complet : le setup tourne au montage ; après chaque commit où les dépendances ont changé, la cleanup tourne avec les anciennes valeurs puis le setup avec les nouvelles ; la cleanup tourne une dernière fois à l'unmount. Règle de la doc : l'utilisateur ne doit pas pouvoir distinguer un seul setup (production) de la séquence setup → cleanup → setup (développement).",
+      "details": "Déroulé complet : le setup tourne au montage ; après chaque commit (l'application des changements au DOM par React) où les dépendances ont changé, la cleanup tourne avec les anciennes valeurs puis le setup avec les nouvelles ; la cleanup tourne une dernière fois à l'unmount. Règle de la doc : l'utilisateur ne doit pas pouvoir distinguer un seul setup (production) de la séquence setup → cleanup → setup (développement).",
       "keyPoints": [
         "Arrête ou annule ce que fait le setup (connexion → déconnexion, requête → ignorer sa réponse)",
         "Appelée avant chaque ré-exécution de l'effet, avec les anciennes valeurs",
@@ -106,7 +106,7 @@
       "moduleId": "effects-refs",
       "kind": "recall",
       "question": "Comment fonctionne le tableau de dépendances de useEffect ?",
-      "answer": "Il liste toutes les valeurs réactives lues par l'effet : props, state, variables et fonctions déclarées dans le composant. Après chaque commit, React compare chaque dépendance à sa valeur précédente avec Object.is et ne relance l'effet que si l'une d'elles a changé. Sans tableau, l'effet se relance après chaque commit ; avec un tableau vide, il ne tourne qu'au montage.",
+      "answer": "Il liste toutes les valeurs réactives lues par l'effet : props, state, variables et fonctions déclarées dans le composant. Après chaque commit (la phase où React applique les changements au DOM), React compare chaque dépendance à sa valeur précédente avec Object.is et ne relance l'effet que si l'une d'elles a changé. Sans tableau, l'effet se relance après chaque commit ; avec un tableau vide, il ne tourne qu'au montage.",
       "keyPoints": [
         "Toutes les valeurs réactives lues dans l'effet : props, state, variables et fonctions du composant",
         "Comparaison de chaque dépendance avec Object.is",
@@ -148,7 +148,7 @@
       "moduleId": "effects-refs",
       "kind": "recall",
       "question": "Comment accéder à un nœud DOM en React, et à quel moment la ref est-elle remplie ?",
-      "answer": "On crée une ref avec useRef(null) et on la passe dans l'attribut ref de l'élément JSX : React y place le nœud DOM. La ref est affectée pendant le commit, pas pendant le rendu, et repasse à null quand le nœud est retiré. On l'utilise donc dans un event handler, ou dans un effet s'il n'y a pas d'événement, pour des actions non destructives comme le focus, le scroll ou la mesure.",
+      "answer": "On crée une ref avec useRef(null) et on la passe dans l'attribut ref de l'élément JSX : React y place le nœud DOM. La ref est affectée pendant le commit (la phase où React applique les changements au DOM), pas pendant le rendu, et repasse à null quand le nœud est retiré. On l'utilise donc dans un event handler, ou dans un effet s'il n'y a pas d'événement, pour des actions non destructives comme le focus, le scroll ou la mesure.",
       "details": "Pour une liste de refs, on passe une fonction à l'attribut ref (ref callback) : React l'appelle avec le nœud, puis appelle la cleanup qu'elle retourne quand il faut vider la ref. Pour limiter ce qu'un composant expose, useImperativeHandle permet de n'exposer que certaines méthodes, par exemple focus().",
       "keyPoints": [
         "useRef(null) puis ref={myRef} sur l'élément JSX",
@@ -201,7 +201,7 @@
         "Code exécuté parce que le composant est affiché : effet ; le reste : event handlers"
       ],
       "pitfalls": [
-        "Un effet qui met à jour le state juste après le rendu relance tout le cycle render → commit → effet : rendus en cascade inutiles"
+        "Un effet qui met à jour le state juste après le rendu relance tout le cycle render → commit (application au DOM) → effet : rendus en cascade inutiles"
       ],
       "source": {
         "title": "You Might Not Need an Effect",
@@ -281,7 +281,7 @@
       "details": "Exemple adapté de la doc :\n\nfunction ChatRoom({ roomId, muted }) {\n  const onConnected = useEffectEvent((roomId) => {\n    if (!muted) {\n      showNotification('Connected to ' + roomId);\n    }\n  });\n\n  useEffect(() => {\n    const connection = createConnection(roomId);\n    connection.on('connected', () => {\n      onConnected(roomId);\n    });\n    connection.connect();\n    return () => connection.disconnect();\n  }, [roomId]);\n}",
       "keyPoints": [
         "Sépare une logique non réactive (un « événement » déclenché depuis l'effet) de l'effet réactif",
-        "Lit toujours les dernières valeurs commitées, sans être une dépendance",
+        "Lit toujours les dernières valeurs commitées (issues du dernier rendu appliqué au DOM), sans être une dépendance",
         "Ne s'appelle que depuis un effet ou un autre Effect Event, jamais pendant le rendu",
         "Ne se passe pas à d'autres composants ou hooks ; identité volontairement non stable"
       ],
@@ -373,7 +373,7 @@
         "Deux raisons de rendre : rendu initial, mise à jour du state du composant ou d'un ancêtre",
         "Rendu récursif : tous les composants imbriqués sont re-rendus par défaut",
         "Re-render ≠ mise à jour du DOM : React ne touche au DOM que s'il y a une différence",
-        "Trois étapes : trigger, render, commit, puis le navigateur peint",
+        "Trois étapes : trigger, render, commit (application au DOM), puis le navigateur peint",
         "Pour sauter le re-render d'un sous-arbre : memo, ou React Compiler"
       ],
       "pitfalls": [
@@ -883,7 +883,7 @@
       "moduleId": "react-19",
       "kind": "recall",
       "question": "Qu'est-ce qu'une Action en React 19 ?",
-      "answer": "Par convention, une Action est une fonction qui utilise une transition asynchrone, c'est-à-dire une fonction, éventuellement async, appelée dans startTransition. React gère alors l'état pending, qui démarre avec la requête et se termine quand la dernière mise à jour est commitée, les mises à jour optimistes avec useOptimistic, et les erreurs, affichées par une Error Boundary avec retour automatique des valeurs optimistes. Les formulaires en profitent directement : on passe une fonction à la prop action d'un <form>, qui est réinitialisé après une soumission réussie.",
+      "answer": "Par convention, une Action est une fonction qui utilise une transition asynchrone, c'est-à-dire une fonction, éventuellement async, appelée dans startTransition. React gère alors l'état pending, qui démarre avec la requête et se termine quand la dernière mise à jour est commitée (appliquée au DOM par React), les mises à jour optimistes avec useOptimistic, et les erreurs, affichées par une Error Boundary avec retour automatique des valeurs optimistes. Les formulaires en profitent directement : on passe une fonction à la prop action d'un <form>, qui est réinitialisé après une soumission réussie.",
       "keyPoints": [
         "Action = fonction qui utilise une transition asynchrone (appelée dans startTransition)",
         "État pending géré automatiquement",
