@@ -1,4 +1,4 @@
-# Brief — Appli de révision tech (React d'abord)
+# Brief — Rekall, appli de révision tech (React d'abord)
 
 Document de référence du Projet « Révisions tech ». À lire avant toute proposition.
 
@@ -31,6 +31,8 @@ Le contenu est séparé du moteur. Ajouter une techno = ajouter un fichier de de
 - **Signalements** : collection partagée `reports` (`cardId`, `reason` wrong | unclear | other, `comment`, `reportedAt`), lue par Claude pour corriger les cartes.
 - **Sans base** (dev local, déconnecté) : mêmes données dans le localStorage, l'écran affiche « Sur cet appareil ».
 - **Nouvelles cartes** : 10 par jour, par difficulté croissante puis dans l'ordre du fichier.
+- **Journée de révision** : commence à 4 h, heure locale (`REVIEW_DAY_START_HOUR`, comme Anki) ; une révision faite avant 4 h compte pour la veille. Au retour sur la page un autre jour de révision, la session se recharge.
+- **Nom de l'appli** : Rekall (titre de la page et de l'icône d'écran d'accueil). Usage mobile : ouvrir le lien dans le navigateur connecté à claude.ai et l'ajouter à l'écran d'accueil ; l'appli mobile Claude ne liste pas ce type d'artefact (bug connu).
 - **UI** : ne dépend que du format des cartes.
 
 ### Ports du domaine
@@ -115,10 +117,12 @@ Decks suivants : TanStack Query (query keys, `staleTime` vs `gcTime`, invalidati
 
 L'appli est un moyen, pas le but : sortir le MVP en une ou deux sessions, puis enrichir les decks au fil de l'eau, plutôt que de peaufiner l'outil au lieu de réviser.
 
-## À reprendre (retours du 01/10/2026)
+## V1 (01/10/2026)
 
-1. **Le terme « commit » dans les cartes** : décidé de garder ce terme officiel de React. Fait : carte `react.rendering.renderAndCommit` ajoutée en tête du deck (61 cartes). Reste à faire : le définir entre parenthèses à sa première occurrence dans chaque carte qui l'emploie.
-2. **Intervalles des boutons de note** (1 min / 6 min / 10 min / 8 j sur une nouvelle carte) : ce sont les étapes d'apprentissage de FSRS (1 et 10 min), puis la révision espacée en jours ; Facile saute l'apprentissage. Options possibles : afficher « dans la session » pour les intervalles du jour, ou réduire les étapes d'apprentissage.
+Retours de la première utilisation, traités :
+- **Terme « commit »** : conservé (vocabulaire officiel de React), défini entre parenthèses à sa première apparition dans chaque carte ; carte `react.rendering.renderAndCommit` en tête du deck (61 cartes).
+- **Intervalles des boutons** : les étapes d'apprentissage FSRS (1 et 10 min) s'affichent « dans la session », la révision espacée « dans 8 j ».
+- Progression de test remise à zéro ; V1 publiée (version 3 de l'artefact).
 
 ## Prochaines étapes
 
