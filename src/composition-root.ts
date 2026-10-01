@@ -1,9 +1,11 @@
+import { InterviewPractice } from './application/interview-practice';
 import { TodayReview, type TodaySnapshot } from './application/today-review';
-import { connectArtifactStorage } from './infrastructure/artifact-runtime/artifact-runtime';
+import { connectArtifactSample, connectArtifactStorage } from './infrastructure/artifact-runtime/artifact-runtime';
 import { browserStorage } from './infrastructure/browser-storage';
 import { ArtifactDbCardReportRepository } from './infrastructure/card-report/artifact-db-card-report-repository';
 import { LocalStorageCardReportRepository } from './infrastructure/card-report/local-storage-card-report-repository';
 import { FetchDeckSource } from './infrastructure/deck-file/fetch-deck-source';
+import { ClaudeAnswerGrader } from './infrastructure/grading/claude-answer-grader';
 import { ArtifactDbProgressRepository } from './infrastructure/progress/artifact-db-progress-repository';
 import { LocalStorageProgressRepository } from './infrastructure/progress/local-storage-progress-repository';
 import { FsrsScheduler } from './infrastructure/scheduling/fsrs-scheduler';
@@ -15,15 +17,19 @@ export type StorageMode = 'synced' | 'this-device';
 
 export type AppContext = {
   readonly todayReview: TodayReview;
+  readonly interviewPractice: InterviewPractice;
   readonly storageMode: StorageMode;
   readonly snapshot: TodaySnapshot;
   readonly loadedAt: Date;
   readonly newCardsPerDay: number;
 };
 
-/** Seul endroit qui choisit les adaptateurs : base de l'artefact si disponible, sinon le navigateur. */
+/**
+ * Seul endroit qui choisit les adaptateurs : base de l'artefact si disponible, sinon le navigateur ;
+ * correction par Claude si la capacité `sample` est servie, sinon grille des points clés.
+ */
 export async function startApp(): Promise<AppContext> {
-  const artifactStorage = await connectArtifactStorage();
+  const [artifactStorage, sample] = await Promise.all([connectArtifactStorage(), connectArtifactSample()]);
   const localStorage = browserStorage();
 
   const todayReview = new TodayReview({
@@ -39,6 +45,7 @@ export async function startApp(): Promise<AppContext> {
   const loadedAt = new Date();
   return {
     todayReview,
+    interviewPractice: new InterviewPractice(sample === null ? null : new ClaudeAnswerGrader(sample)),
     storageMode: artifactStorage === null ? 'this-device' : 'synced',
     snapshot: await todayReview.loadToday(loadedAt),
     loadedAt,

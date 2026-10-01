@@ -28,9 +28,15 @@ type ArtifactUser = {
   id(): Promise<string | null>;
 };
 
+/** Capacité `sample` : demander à Claude, sur le compte de l'utilisateur, une réponse au format JSON. */
+export type ArtifactSample = {
+  json(input: string, options?: { readonly modelTier?: 'default' | 'quick' | 'complex' }): Promise<unknown>;
+};
+
 type ClaudeRuntime = {
   use(name: 'db'): Promise<ArtifactDb | null>;
   use(name: 'user'): Promise<ArtifactUser | null>;
+  use(name: 'sample'): Promise<ArtifactSample | null>;
 };
 
 declare global {
@@ -55,4 +61,9 @@ export async function connectArtifactStorage(): Promise<ArtifactStorage | null> 
   const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
   const userId = (await user?.id()) ?? null;
   return db !== null && userId !== null ? { db, userId } : null;
+}
+
+/** Accès à Claude depuis l'artefact publié, ou null ailleurs (dev local, capacité non servie). */
+export async function connectArtifactSample(): Promise<ArtifactSample | null> {
+  return (await window.claude?.use('sample')) ?? null;
 }
