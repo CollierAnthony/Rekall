@@ -86,7 +86,7 @@ Règle de contenu : les cartes sont écrites **à partir des vraies pages de doc
 
 - Vite 8, Vitest 5, TypeScript 7 (strict, `noUncheckedIndexedAccess`). Vite+ écarté pour l'instant (1.0 sortie le 28/09/2026, installe un CLI global qui gère aussi Node et le gestionnaire de paquets) ; migration possible plus tard.
 - React 19.3 pour l'UI (sans React Compiler pour l'instant), ts-fsrs 5 pour la répétition espacée.
-- Publication : `npm run build:artifact` produit `artifact/index.html` (CSS et JS en ligne) et `artifact/decks/`, publiés sur l'artefact https://claude.ai/artifact/NB1xrVepkDfbXNsCdWVY8a (capacités `db` et `user`). Republier sur cette URL pour garder la progression.
+- Publication : `npm run build:artifact` produit `artifact/index.html` (CSS et JS en ligne) et `artifact/decks/`, publiés sur l'artefact https://claude.ai/artifact/NB1xrVepkDfbXNsCdWVY8a (capacités `db`, `user` et `sample` ; republier en passant les trois si on redéclare les capacités). Republier sur cette URL pour garder la progression.
 - Zod 4 valide les fichiers de deck, uniquement dans l'infrastructure (`src/infrastructure/deck-file/`) : le domaine n'en dépend pas.
 - Git dans le dossier, commits locaux autorisés pour Claude, jamais de push. Claude peut ajouter une dépendance s'il la juge pertinente, en expliquant son rôle.
 - `node_modules` du dossier = celui de Windows (`npm install` côté Windows). Claude installe et lance les tests dans une copie Linux séparée, pour ne pas mélanger les binaires des deux plateformes.
@@ -95,7 +95,7 @@ Règle de contenu : les cartes sont écrites **à partir des vraies pages de doc
 
 1. **Aujourd'hui** (MVP) : cartes à réviser + quelques nouvelles (10 max par jour, réglable), ~15 min. Question → je réponds à voix haute → je révèle → j'évalue.
 2. **Signaler une carte** (MVP) : fausse ou floue, stocké côté serveur pour que Claude la corrige ensuite.
-3. **Mode entretien** (après le MVP) : questions au hasard parmi les cartes déjà vues, chrono de 60 s, réponse à l'oral, puis je tape ou dicte (dictée du clavier du téléphone) l'essentiel. Claude corrige avec les `keyPoints` : points couverts, points manqués, et une réponse modèle de 30 s. Sans Claude : checklist des points clés à cocher. En attendant : « interroge-moi » dans le chat.
+3. **Mode entretien** (fait le 01/10/2026) : onglet caché qui apparaît à partir de 20 cartes vues (`INTERVIEW_UNLOCK_THRESHOLD`). 5 questions au hasard parmi les cartes déjà vues, chrono de 60 s, réponse à l'oral, puis je tape ou dicte (dictée du clavier du téléphone) l'essentiel. Claude corrige via la capacité `sample` (port `AnswerGrader`, adaptateur `ClaudeAnswerGrader`) : points couverts, points manqués, commentaire, réponse modèle de 30 s. Sans Claude : grille des points clés à cocher. N'a aucun effet sur la répétition espacée, rien n'est stocké.
 4. **Progression** (après le MVP) : taux de rétention par module, liste des points faibles à retravailler.
 
 ## Programme React (deck 1)
