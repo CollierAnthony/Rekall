@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture de Rekall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Mise en page : une colonne de lecture (~760px) ; le schéma prend toute la largeur utile et défile seul sur téléphone. */
+:root {
+  --ground: #f6f5f1;
+  --card: #ffffff;
+  --ink: #111111;
+  --ink-2: #3d3d39;
+  --muted: #5a5a55;
+  --line: #e2dfd7;
+  --soft: #f0eee8;
+  --accent: #2443e0;
+  --accent-text: #2443e0;
+  --domain: #1a2fa8;
+  --domain-ink: #ffffff;
+  --app: #dfe5ff;
+  --app-line: #2443e0;
+  --ui: #fff1c7;
+  --ui-line: #c99700;
+  --infra: #ffe6d9;
+  --infra-line: #e2561c;
+  --wire: #111111;
+  --wire-ink: #ffffff;
+  --arrow: #3d3d39;
+  --font-display: 'Bricolage Grotesque', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #111113;
+    --card: #1c1c1f;
+    --ink: #f4f4f0;
+    --ink-2: #d6d6d0;
+    --muted: #a3a39c;
+    --line: #2e2e33;
+    --soft: #26262a;
+    --accent: #4361ff;
+    --accent-text: #8ea2ff;
+    --domain: #4361ff;
+    --domain-ink: #ffffff;
+    --app: #1d2550;
+    --app-line: #8ea2ff;
+    --ui: #3a3218;
+    --ui-line: #e8b931;
+    --infra: #3d2216;
+    --infra-line: #ff7a3d;
+    --wire: #f4f4f0;
+    --wire-ink: #111111;
+    --arrow: #d6d6d0;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #111113;
+  --card: #1c1c1f;
+  --ink: #f4f4f0;
+  --ink-2: #d6d6d0;
+  --muted: #a3a39c;
+  --line: #2e2e33;
+  --soft: #26262a;
+  --accent: #4361ff;
+  --accent-text: #8ea2ff;
+  --domain: #4361ff;
+  --domain-ink: #ffffff;
+  --app: #1d2550;
+  --app-line: #8ea2ff;
+  --ui: #3a3218;
+  --ui-line: #e8b931;
+  --infra: #3d2216;
+  --infra-line: #ff7a3d;
+  --wire: #f4f4f0;
+  --wire-ink: #111111;
+  --arrow: #d6d6d0;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  width: min(100%, 1340px);
+  margin: 0 auto;
+  padding: 40px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+.reading { width: min(100%, 760px); }
+
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.4rem, 7vw, 4rem); line-height: 0.98; }
+h2 { font-size: clamp(1.6rem, 4vw, 2.1rem); line-height: 1.05; }
+h3 { font-size: 1.15rem; letter-spacing: -0.02em; }
+p { margin: 0; }
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+code { padding: 1px 6px; border-radius: 6px; background: var(--soft); white-space: nowrap; }
+a { color: var(--accent-text); }
+
+.eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.intro { display: flex; flex-direction: column; gap: 18px; }
+.intro__lead { font-size: 1.15rem; color: var(--ink-2); max-width: 62ch; }
+
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.facts li { padding: 6px 12px; border-radius: 999px; background: var(--card); font-size: 0.9rem; font-weight: 700; }
+.facts strong { font-family: var(--font-display); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+section { display: flex; flex-direction: column; gap: 20px; }
+.section__head { display: flex; flex-direction: column; gap: 8px; }
+.section__lead { color: var(--ink-2); max-width: 66ch; }
+
+/* ---------------------------------------------------------------- schéma */
+
+.diagram-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.diagram-scroll { overflow-x: auto; border-radius: 28px; background: var(--card); padding: 12px; -webkit-overflow-scrolling: touch; }
+.diagram-scroll svg { display: block; width: 100%; min-width: 880px; height: auto; }
+.diagram-hint { font-size: 0.85rem; color: var(--muted); }
+
+svg text { font-family: var(--font-body); fill: var(--ink); }
+svg .t-title { font-family: var(--font-display); font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
+svg .t-label { font-weight: 700; font-size: 13px; }
+svg .t-mono { font-family: var(--font-mono); font-size: 11.5px; }
+svg .t-small { font-size: 11.5px; fill: var(--muted); }
+svg .t-column { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; fill: var(--muted); }
+
+.hex-app { fill: var(--app); stroke: var(--app-line); stroke-width: 2; }
+.hex-domain { fill: var(--domain); }
+.domain-text { fill: var(--domain-ink); }
+.chip-domain { fill: rgb(255 255 255 / 14%); }
+.box-ui { fill: var(--ui); stroke: var(--ui-line); stroke-width: 2; }
+.box-port { fill: var(--card); stroke: var(--app-line); stroke-width: 2; stroke-dasharray: 5 4; }
+.box-infra { fill: var(--infra); stroke: var(--infra-line); stroke-width: 1.5; }
+.box-usecase { fill: var(--card); stroke: var(--app-line); stroke-width: 1.5; }
+.box-wire { fill: var(--wire); }
+.wire-text { fill: var(--wire-ink); }
+.edge { stroke: var(--arrow); stroke-width: 1.6; fill: none; }
+.edge-dashed { stroke-dasharray: 5 4; }
+.arrowhead { fill: var(--arrow); }
+
+.node { cursor: pointer; outline: none; }
+.node:hover .hit, .node:focus-visible .hit { stroke: var(--ink); stroke-width: 3; }
+.node[aria-pressed="true"] .hit { stroke: var(--ink); stroke-width: 3.5; }
+.node .hit { transition: stroke-width 120ms ease; }
+
+.detail {
+  border-radius: 24px;
+  background: var(--card);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.detail__layer { align-self: flex-start; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+.layer-ui { background: var(--ui); }
+.layer-app { background: var(--app); }
+.layer-domain { background: var(--domain); color: var(--domain-ink); }
+.layer-infra { background: var(--infra); }
+.layer-wire { background: var(--wire); color: var(--wire-ink); }
+.detail h3 { font-size: 1.5rem; }
+.detail__role { color: var(--ink-2); }
+.detail dl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 4px 0 0; }
+.detail dt { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.detail dd { margin: 4px 0 0; }
+.detail ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 4px; }
+.detail li code { white-space: normal; }
+
+/* Côte à côte seulement quand le schéma tient sans défiler (880px + panneau). */
+@media (min-width: 1360px) {
+  .diagram-shell { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+  .detail { position: sticky; top: 16px; }
+}
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: 0.88rem; color: var(--ink-2); }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.swatch { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+.swatch-ui { background: var(--ui); border: 2px solid var(--ui-line); }
+.swatch-app { background: var(--app); border: 2px solid var(--app-line); }
+.swatch-domain { background: var(--domain); }
+.swatch-port { background: var(--card); border: 2px dashed var(--app-line); }
+.swatch-infra { background: var(--infra); border: 2px solid var(--infra-line); }
+.swatch-wire { background: var(--wire); }
+
+/* ---------------------------------------------------------------- règles, flux, arbre */
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+.rule { border-radius: 20px; background: var(--card); padding: 18px; display: flex; flex-direction: column; gap: 6px; }
+.rule p { color: var(--ink-2); font-size: 0.95rem; }
+
+.flows { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.flow { border-radius: 24px; background: var(--card); padding: 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.flow ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 12px; }
+.flow li { counter-increment: step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px 12px; }
+.flow li::before {
+  content: counter(step);
+  grid-row: span 2;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--soft); font-family: var(--font-display); font-weight: 800; font-size: 0.85rem;
+}
+.flow li p { font-size: 0.95rem; }
+.flow .where { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.tag { padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: 0.74rem; color: var(--ink); }
+
+.tree { border-radius: 24px; background: var(--card); padding: 22px; overflow-x: auto; }
+.tree ul { list-style: none; margin: 0; padding-left: 22px; border-left: 2px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.tree > ul { padding-left: 0; border-left: 0; }
+.tree li { display: flex; flex-direction: column; gap: 8px; }
+.tree .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.tree .name { font-family: var(--font-mono); font-weight: 500; font-size: 0.9rem; }
+.tree .note { color: var(--muted); font-size: 0.88rem; }
+
+.pipeline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pipeline span.step { padding: 8px 12px; border-radius: 14px; background: var(--card); font-family: var(--font-mono); font-size: 0.82rem; }
+.pipeline span.to { color: var(--muted); }
+
+.table-scroll { overflow-x: auto; border-radius: 20px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 700; width: 26%; }
+
+.critique { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.critique li { border-radius: 20px; background: var(--card); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+.critique p { color: var(--ink-2); }
+
+.path { margin: 0; padding: 0; list-style: none; counter-reset: read; display: flex; flex-direction: column; gap: 10px; }
+.path li { counter-increment: read; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px 14px; padding: 14px 18px; border-radius: 20px; background: var(--card); }
+.path li::before { content: counter(read); grid-row: span 2; font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; line-height: 1; color: var(--accent-text); }
+.path .files { font-family: var(--font-mono); font-size: 0.84rem; overflow-wrap: anywhere; }
+.path p { color: var(--ink-2); font-size: 0.95rem; }
+
+pre { margin: 0; padding: 18px 20px; border-radius: 20px; background: var(--card); overflow-x: auto; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.7; }
+pre .c { color: var(--muted); }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<main class="page">
+  <header class="intro reading">
+    <p class="eyebrow">Rekall · guide du code</p>
+    <h1>Architecture de Rekall</h1>
+    <p class="intro__lead">Une appli React publiée en artefact, construite en hexagone : un domaine pur au centre, des cas d’usage qui ne parlent qu’à des ports, et des adaptateurs choisis au démarrage selon ce que le runtime de l’artefact sert.</p>
+    <ul class="facts" aria-label="Le projet en chiffres">
+      <li><strong>4</strong> couches</li>
+      <li><strong>5</strong> ports</li>
+      <li><strong>7</strong> adaptateurs</li>
+      <li><strong>3 400</strong> lignes de TypeScript</li>
+      <li><strong>67</strong> tests</li>
+    </ul>
+  </header>
+
+  <section aria-labelledby="schema-title">
+    <div class="section__head reading">
+      <h2 id="schema-title">Le schéma</h2>
+      <p class="section__lead">Clique sur un bloc pour voir son rôle, ses fichiers et pourquoi il existe. Les flèches pointent toujours vers le centre : une couche ne connaît que celles qui sont plus à l’intérieur.</p>
+    </div>
+    <ul class="legend">
+      <li><span class="swatch swatch-ui"></span>UI (adaptateur primaire)</li>
+      <li><span class="swatch swatch-app"></span>Application</li>
+      <li><span class="swatch swatch-domain"></span>Domaine</li>
+      <li><span class="swatch swatch-port"></span>Port (interface)</li>
+      <li><span class="swatch swatch-infra"></span>Adaptateur (infrastructure)</li>
+      <li><span class="swatch swatch-wire"></span>Composition root</li>
+    </ul>
+    <div class="diagram-shell">
+      <div>
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1140 720" role="group" aria-label="Schéma d’architecture de Rekall">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" class="arrowhead"></path>
+              </marker>
+            </defs>
+
+            <text x="115" y="34" text-anchor="middle" class="t-column">ENTRÉE</text>
+            <text x="450" y="34" text-anchor="middle" class="t-column">CŒUR</text>
+            <text x="780" y="34" text-anchor="middle" class="t-column">PORTS</text>
+            <text x="1020" y="34" text-anchor="middle" class="t-column">ADAPTATEURS</text>
+
+            <!-- UI -->
+            <g class="node" data-node="ui" tabindex="0" role="button" aria-label="UI React">
+              <rect class="box-ui hit" x="20" y="220" width="190" height="200" rx="22"></rect>
+              <text x="40" y="256" class="t-title">UI React</text>
+              <text x="40" y="278" class="t-small">adaptateur primaire</text>
+              <text x="40" y="312" class="t-mono">Rekall.tsx</text>
+              <text x="40" y="332" class="t-mono">useAppNavigation</text>
+              <text x="40" y="352" class="t-mono">useTodaySession</text>
+              <text x="40" y="372" class="t-mono">écrans, styles.css</text>
+              <text x="40" y="400" class="t-small">appelle les cas d’usage</text>
+            </g>
+            <path class="edge" d="M210 320 L 262 320" marker-end="url(#arrow)"></path>
+
+            <!-- Application -->
+            <g class="node" data-node="application" tabindex="0" role="button" aria-label="Application">
+              <polygon class="hex-app hit" points="250,320 350,48 550,48 650,320 550,592 350,592"></polygon>
+              <text x="450" y="80" text-anchor="middle" class="t-title">Application</text>
+            </g>
+            <g class="node" data-node="todayReview" tabindex="0" role="button" aria-label="Cas d’usage TodayReview">
+              <rect class="box-usecase hit" x="365" y="96" width="170" height="30" rx="10"></rect>
+              <text x="450" y="116" text-anchor="middle" class="t-mono">TodayReview</text>
+            </g>
+            <g class="node" data-node="interviewPractice" tabindex="0" role="button" aria-label="Cas d’usage InterviewPractice">
+              <rect class="box-usecase hit" x="365" y="134" width="170" height="30" rx="10"></rect>
+              <text x="450" y="154" text-anchor="middle" class="t-mono">InterviewPractice</text>
+            </g>
+
+            <!-- Domaine -->
+            <g class="node" data-node="domain" tabindex="0" role="button" aria-label="Domaine">
+              <polygon class="hex-domain hit" points="310,368 380,198 520,198 590,368 520,538 380,538"></polygon>
+              <text x="450" y="228" text-anchor="middle" class="t-title domain-text">Domaine</text>
+              <rect class="chip-domain" x="380" y="242" width="140" height="24" rx="8"></rect>
+              <text x="450" y="258" text-anchor="middle" class="t-mono domain-text">deck · review</text>
+              <rect class="chip-domain" x="380" y="272" width="140" height="24" rx="8"></rect>
+              <text x="450" y="288" text-anchor="middle" class="t-mono domain-text">today-queue</text>
+              <rect class="chip-domain" x="380" y="302" width="140" height="24" rx="8"></rect>
+              <text x="450" y="318" text-anchor="middle" class="t-mono domain-text">interview</text>
+              <rect class="chip-domain" x="380" y="332" width="140" height="24" rx="8"></rect>
+              <text x="450" y="348" text-anchor="middle" class="t-mono domain-text">card-search</text>
+              <rect class="chip-domain" x="380" y="362" width="140" height="24" rx="8"></rect>
+              <text x="450" y="378" text-anchor="middle" class="t-mono domain-text">card-status</text>
+              <rect class="chip-domain" x="380" y="392" width="140" height="24" rx="8"></rect>
+              <text x="450" y="408" text-anchor="middle" class="t-mono domain-text">deck-progress</text>
+              <rect class="chip-domain" x="380" y="422" width="140" height="24" rx="8"></rect>
+              <text x="450" y="438" text-anchor="middle" class="t-mono domain-text">card-report</text>
+              <text x="450" y="478" text-anchor="middle" class="t-small domain-text" style="fill: var(--domain-ink); opacity: 0.85">aucune dépendance</text>
+              <text x="450" y="496" text-anchor="middle" class="t-small domain-text" style="fill: var(--domain-ink); opacity: 0.85">ni React, ni Zod, ni FSRS</text>
+            </g>
+            <path class="edge" d="M450 164 L 450 196" marker-end="url(#arrow)"></path>
+
+            <!-- Ports : reliés au bord droit de l'application -->
+            <path class="edge edge-dashed" d="M576 118 L 690 118"></path>
+            <path class="edge edge-dashed" d="M612 220 L 690 220"></path>
+            <path class="edge edge-dashed" d="M650 320 L 690 320"></path>
+            <path class="edge edge-dashed" d="M612 420 L 690 420"></path>
+            <path class="edge edge-dashed" d="M576 522 L 690 522"></path>
+
+            <g class="node" data-node="scheduler" tabindex="0" role="button" aria-label="Port Scheduler">
+              <rect class="box-port hit" x="690" y="98" width="180" height="40" rx="12"></rect>
+              <text x="780" y="123" text-anchor="middle" class="t-mono">Scheduler</text>
+            </g>
+            <g class="node" data-node="progress" tabindex="0" role="button" aria-label="Port ProgressRepository">
+              <rect class="box-port hit" x="690" y="200" width="180" height="40" rx="12"></rect>
+              <text x="780" y="225" text-anchor="middle" class="t-mono">ProgressRepository</text>
+            </g>
+            <g class="node" data-node="reports" tabindex="0" role="button" aria-label="Port CardReportRepository">
+              <rect class="box-port hit" x="690" y="300" width="180" height="40" rx="12"></rect>
+              <text x="780" y="325" text-anchor="middle" class="t-mono">CardReportRepository</text>
+            </g>
+            <g class="node" data-node="decks" tabindex="0" role="button" aria-label="Port DeckSource">
+              <rect class="box-port hit" x="690" y="400" width="180" height="40" rx="12"></rect>
+              <text x="780" y="425" text-anchor="middle" class="t-mono">DeckSource</text>
+            </g>
+            <g class="node" data-node="grader" tabindex="0" role="button" aria-label="Port AnswerGrader">
+              <rect class="box-port hit" x="690" y="502" width="180" height="40" rx="12"></rect>
+              <text x="780" y="527" text-anchor="middle" class="t-mono">AnswerGrader</text>
+            </g>
+
+            <!-- Adaptateurs : les flèches « implémente » pointent vers le port -->
+            <path class="edge edge-dashed" d="M920 118 L 874 118" marker-end="url(#arrow)"></path>
+            <path class="edge edge-dashed" d="M920 199 L 896 199 L 896 220 L 874 220" marker-end="url(#arrow)"></path>
+            <path class="edge edge-dashed" d="M920 241 L 896 241 L 896 220"></path>
+            <path class="edge edge-dashed" d="M920 299 L 896 299 L 896 320 L 874 320" marker-end="url(#arrow)"></path>
+            <path class="edge edge-dashed" d="M920 341 L 896 341 L 896 320"></path>
+            <path class="edge edge-dashed" d="M920 420 L 874 420" marker-end="url(#arrow)"></path>
+            <path class="edge edge-dashed" d="M920 522 L 874 522" marker-end="url(#arrow)"></path>
+
+            <g class="node" data-node="fsrs" tabindex="0" role="button" aria-label="Adaptateur FsrsScheduler">
+              <rect class="box-infra hit" x="920" y="96" width="200" height="44" rx="12"></rect>
+              <text x="936" y="115" class="t-mono">FsrsScheduler</text>
+              <text x="936" y="131" class="t-small">librairie ts-fsrs</text>
+            </g>
+            <g class="node" data-node="progressDb" tabindex="0" role="button" aria-label="Adaptateur de progression : base de l’artefact">
+              <rect class="box-infra hit" x="920" y="180" width="200" height="38" rx="12"></rect>
+              <text x="936" y="197" class="t-label">Base de l’artefact</text>
+              <text x="936" y="211" class="t-small">synchronisée, privée</text>
+            </g>
+            <g class="node" data-node="progressLocal" tabindex="0" role="button" aria-label="Adaptateur de progression : localStorage">
+              <rect class="box-infra hit" x="920" y="222" width="200" height="38" rx="12"></rect>
+              <text x="936" y="239" class="t-label">localStorage</text>
+              <text x="936" y="253" class="t-small">dev local, hors artefact</text>
+            </g>
+            <g class="node" data-node="reportsDb" tabindex="0" role="button" aria-label="Adaptateur de signalements : base de l’artefact">
+              <rect class="box-infra hit" x="920" y="280" width="200" height="38" rx="12"></rect>
+              <text x="936" y="297" class="t-label">Base de l’artefact</text>
+              <text x="936" y="311" class="t-small">collection partagée</text>
+            </g>
+            <g class="node" data-node="reportsLocal" tabindex="0" role="button" aria-label="Adaptateur de signalements : localStorage">
+              <rect class="box-infra hit" x="920" y="322" width="200" height="38" rx="12"></rect>
+              <text x="936" y="339" class="t-label">localStorage</text>
+              <text x="936" y="353" class="t-small">dev local</text>
+            </g>
+            <g class="node" data-node="fetchDecks" tabindex="0" role="button" aria-label="Adaptateur FetchDeckSource">
+              <rect class="box-infra hit" x="920" y="398" width="200" height="44" rx="12"></rect>
+              <text x="936" y="417" class="t-mono">FetchDeckSource</text>
+              <text x="936" y="433" class="t-small">decks/*.json + Zod</text>
+            </g>
+            <g class="node" data-node="claude" tabindex="0" role="button" aria-label="Adaptateur ClaudeAnswerGrader">
+              <rect class="box-infra hit" x="920" y="500" width="200" height="44" rx="12"></rect>
+              <text x="936" y="519" class="t-mono">ClaudeAnswerGrader</text>
+              <text x="936" y="535" class="t-small">capacité sample</text>
+            </g>
+
+            <!-- Composition root -->
+            <g class="node" data-node="composition" tabindex="0" role="button" aria-label="Composition root">
+              <rect class="box-wire hit" x="20" y="630" width="1100" height="64" rx="18"></rect>
+              <text x="44" y="658" class="t-title wire-text">composition-root.ts</text>
+              <text x="44" y="680" class="t-small wire-text" style="fill: var(--wire-ink); opacity: 0.85">startApp() : connecte le runtime, choisit les adaptateurs, crée les cas d’usage, charge la journée.</text>
+            </g>
+            <path class="edge edge-dashed" d="M115 628 L 115 424" marker-end="url(#arrow)"></path>
+            <path class="edge edge-dashed" d="M450 628 L 450 596" marker-end="url(#arrow)"></path>
+            <path class="edge edge-dashed" d="M1020 628 L 1020 548" marker-end="url(#arrow)"></path>
+            <text x="124" y="600" class="t-small">fournit le contexte</text>
+            <text x="1030" y="600" class="t-small">instancie</text>
+          </svg>
+        </div>
+        <p class="diagram-hint">Sur téléphone, fais glisser le schéma horizontalement.</p>
+      </div>
+
+      <aside class="detail" id="detail" aria-live="polite">
+        <span class="detail__layer layer-domain" id="detail-layer">Domaine</span>
+        <h3 id="detail-title">Domaine</h3>
+        <p class="detail__role" id="detail-role"></p>
+        <dl id="detail-body"></dl>
+      </aside>
+    </div>
+  </section>
+
+  <section aria-labelledby="rules-title">
+    <div class="section__head reading">
+      <h2 id="rules-title">La règle de dépendance</h2>
+      <p class="section__lead">Tout l’intérêt de l’hexagone tient en trois règles. Elles se vérifient en lisant les <code>import</code> en tête de chaque fichier.</p>
+    </div>
+    <div class="rules">
+      <div class="rule">
+        <h3>Le domaine n’importe rien</h3>
+        <p>Uniquement d’autres fichiers du domaine. Pas de React, pas de Zod, pas de <code>ts-fsrs</code>, pas de <code>window</code>. C’est pour ça qu’il se teste avec des dates et des objets en dur.</p>
+      </div>
+      <div class="rule">
+        <h3>L’application ne connaît que des ports</h3>
+        <p><code>TodayReview</code> reçoit un <code>Scheduler</code>, un <code>ProgressRepository</code>… sans savoir s’il parle à FSRS, à la base de l’artefact ou au navigateur.</p>
+      </div>
+      <div class="rule">
+        <h3>Un seul fichier connaît tout</h3>
+        <p><code>composition-root.ts</code> est le seul à importer à la fois les cas d’usage et les adaptateurs. Changer d’adaptateur, c’est changer une ligne ici.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="flows-title">
+    <div class="section__head reading">
+      <h2 id="flows-title">Deux parcours dans le code</h2>
+      <p class="section__lead">Le démarrage et la notation d’une carte traversent toutes les couches. Les suivre une fois suffit à comprendre l’appli.</p>
+    </div>
+    <div class="flows">
+      <div class="flow">
+        <h3>Démarrage</h3>
+        <ol>
+          <li><p><code>main.tsx</code> appelle <code>startApp()</code> une seule fois, hors du rendu, et passe la promesse à <code>&lt;App&gt;</code>.</p><span class="where"><span class="tag layer-wire">composition</span>main.tsx</span></li>
+          <li><p>Le runtime de l’artefact est interrogé en parallèle : base + identité de l’utilisateur, et <code>sample</code> pour Claude.</p><span class="where"><span class="tag layer-infra">infrastructure</span>artifact-runtime.ts</span></li>
+          <li><p>Les adaptateurs sont choisis : base de l’artefact ou <code>localStorage</code>, correcteur Claude ou aucun.</p><span class="where"><span class="tag layer-wire">composition</span>composition-root.ts</span></li>
+          <li><p><code>loadToday(now)</code> charge en parallèle les decks (validés par Zod) et la progression ; la progression des cartes disparues est écartée.</p><span class="where"><span class="tag layer-app">application</span>today-review.ts</span></li>
+          <li><p><code>composeTodayQueue</code> place les cartes dues, puis les nouvelles deck par deck, dans la limite de 15 par jour.</p><span class="where"><span class="tag layer-domain">domaine</span>today-queue.ts</span></li>
+          <li><p><code>&lt;App&gt;</code> lit la promesse avec <code>use()</code> sous <code>&lt;Suspense&gt;</code>, puis rend <code>Rekall</code>.</p><span class="where"><span class="tag layer-ui">UI</span>App.tsx</span></li>
+        </ol>
+      </div>
+      <div class="flow">
+        <h3>Noter une carte</h3>
+        <ol>
+          <li><p>Clic sur « Bon » (ou touche 3) dans le dock de notation.</p><span class="where"><span class="tag layer-ui">UI</span>RatingDock.tsx</span></li>
+          <li><p>Le hook de session appelle <code>todayReview.rate(card, progress, 'good', now)</code>.</p><span class="where"><span class="tag layer-ui">UI</span>useTodaySession.ts</span></li>
+          <li><p>Le port <code>Scheduler</code> calcule la nouvelle progression ; FSRS ne sort jamais de son adaptateur.</p><span class="where"><span class="tag layer-infra">infrastructure</span>fsrs-scheduler.ts</span></li>
+          <li><p>Le port <code>ProgressRepository</code> l’enregistre : un document par carte, validé par Zod.</p><span class="where"><span class="tag layer-infra">infrastructure</span>artifact-db-progress-repository.ts</span></li>
+          <li><p>Le reducer applique <code>advanceTodayQueue</code> : la carte repasse en fin de file si elle revient dans la journée.</p><span class="where"><span class="tag layer-domain">domaine</span>today-queue.ts</span></li>
+          <li><p><code>Rekall</code> se re-rend : l’accueil, la bibliothèque et l’entretien voient la nouvelle progression sans rechargement.</p><span class="where"><span class="tag layer-ui">UI</span>Rekall.tsx</span></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ui-title">
+    <div class="section__head reading">
+      <h2 id="ui-title">L’interface</h2>
+      <p class="section__lead">Pas de routeur ni de store global : un onglet courant, au plus un écran ouvert par-dessus, et la session du jour tenue au sommet par un <code>useReducer</code>.</p>
+    </div>
+    <div class="tree">
+      <ul>
+        <li>
+          <div class="row"><span class="name">App</span><span class="note">ErrorBoundary + Suspense, lit le contexte avec use()</span></div>
+          <ul>
+            <li>
+              <div class="row"><span class="name">Rekall</span><span class="note">useTodaySession · useAppNavigation · useReloadOnNewReviewDay</span></div>
+              <ul>
+                <li>
+                  <div class="row"><span class="name">&lt;Activity&gt; onglets</span><span class="note">masqués mais montés : état et défilement conservés</span></div>
+                  <ul>
+                    <li><div class="row"><span class="name">TabBar</span><span class="note">barre en bas sur téléphone, colonne sur ordinateur</span></div></li>
+                    <li><div class="row"><span class="name">HomeScreen</span><span class="note">session du jour, entretien, demain, catégories</span></div></li>
+                    <li><div class="row"><span class="name">LibraryScreen → CardRow</span><span class="note">recherche, filtres, modules repliables</span></div></li>
+                  </ul>
+                </li>
+                <li>
+                  <div class="row"><span class="name">Écran par-dessus</span><span class="note">un à la fois ; le retour du navigateur le referme</span></div>
+                  <ul>
+                    <li><div class="row"><span class="name">ReviewSession</span><span class="note">QuestionView | AnswerView (KeyPointChecklist, RatingDock) | SessionDone, ReportSheet</span></div></li>
+                    <li><div class="row"><span class="name">InterviewScreen</span><span class="note">InterviewQuestion (chrono, notes, correction) → InterviewSummary</span></div></li>
+                    <li><div class="row"><span class="name">CardDetail</span><span class="note">fiche de la bibliothèque, ReportSheet</span></div></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="content-title">
+    <div class="section__head reading">
+      <h2 id="content-title">Le contenu</h2>
+      <p class="section__lead">Les decks sont des fichiers JSON publiés à côté de la page. Ajouter une techno, c’est un fichier et une ligne dans l’index, sans toucher au code ; un test fait passer chaque deck listé dans le même parseur que l’appli.</p>
+    </div>
+    <div class="pipeline" aria-label="Chemin d’un deck jusqu’au domaine">
+      <span class="step">decks/index.json</span><span class="to">→</span>
+      <span class="step">decks/javascript.json</span><span class="to">→</span>
+      <span class="step">FetchDeckSource</span><span class="to">→</span>
+      <span class="step">deckFileSchema (Zod)</span><span class="to">→</span>
+      <span class="step">findDeckInconsistencies</span><span class="to">→</span>
+      <span class="step">Deck (domaine)</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Donnée</th><th>Dans l’artefact</th><th>En local (npm run dev)</th></tr></thead>
+        <tbody>
+          <tr><td>Progression</td><td><code>data/users/&lt;id&gt;/progress/cards/&lt;cardId&gt;</code>, privée à chaque utilisateur</td><td><code>revisions-tech:progress:v1</code></td></tr>
+          <tr><td>Signalements</td><td><code>reports/&lt;id auto&gt;</code>, partagée, lue par Claude</td><td><code>revisions-tech:card-reports:v1</code></td></tr>
+          <tr><td>Decks</td><td><code>decks/*.json</code> publiés avec la page</td><td><code>public/decks/*.json</code></td></tr>
+          <tr><td>Correction d’entretien</td><td>Claude via la capacité <code>sample</code></td><td>grille des points clés</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="choices-title">
+    <div class="section__head reading">
+      <h2 id="choices-title">Choix et compromis</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Choix</th><th>Pourquoi</th><th>Ce que ça coûte</th></tr></thead>
+        <tbody>
+          <tr><td>Ports et adaptateurs</td><td>Chaque dépendance a un repli : base → navigateur, Claude → grille, FSRS → un SM-2 maison possible. Le domaine se teste sans runtime.</td><td>Plus de fichiers et un peu de câblage.</td></tr>
+          <tr><td>Zod seulement dans l’infrastructure</td><td>On valide aux frontières, là où arrive l’inconnu : fichiers de deck, documents de la base, réponses de Claude. Le domaine reste en types TypeScript.</td><td>Un mapping document ↔ domaine par adaptateur.</td></tr>
+          <tr><td>État FSRS opaque (<code>schedulerState</code>)</td><td>Changer d’algorithme ne touche ni le domaine ni les données déjà stockées des autres champs.</td><td>Le domaine ne peut rien déduire de la stabilité ou de la difficulté FSRS.</td></tr>
+          <tr><td>Journée de révision à 4 h</td><td>Réviser à 1 h du matin prolonge la veille au lieu d’entamer le quota du lendemain.</td><td>Les dates sont en heure locale : les tests couvrent le changement d’heure.</td></tr>
+          <tr><td>Instantané chargé au démarrage</td><td>Simple et rapide ; la page se recharge seule quand la journée change.</td><td>Pas de synchronisation en direct si deux appareils sont ouverts en même temps.</td></tr>
+          <tr><td>Pas de routeur, pas de store</td><td>Un onglet et un écran par-dessus suffisent ; le lien d’un artefact n’accepte de toute façon qu’une <code>#ancre</code>.</td><td>Pas d’URL par écran ; l’historique est géré à la main dans <code>useAppNavigation</code>.</td></tr>
+          <tr><td><code>&lt;Activity&gt;</code> pour les onglets</td><td>La bibliothèque garde sa recherche et ses modules ouverts pendant qu’on lit une fiche.</td><td>Les onglets masqués restent rendus en basse priorité.</td></tr>
+          <tr><td>Une feuille de styles à jetons</td><td>Clair et sombre par variables CSS, comme la maquette Studio.</td><td>Un seul fichier de 2 300 lignes, à découper s’il grossit encore.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="critique-title">
+    <div class="section__head reading">
+      <h2 id="critique-title">À challenger</h2>
+      <p class="section__lead">Ce que je referais autrement, ou que je surveillerais, en relisant le code avec un œil exigeant.</p>
+    </div>
+    <ul class="critique reading">
+      <li>
+        <h3>La session vit dans un hook d’UI</h3>
+        <p><code>useTodaySession</code> appelle directement <code>advanceTodayQueue</code> et <code>countDueTomorrow</code> : une partie du cas d’usage « réviser » est côté React. Alternative : une classe applicative <code>ReviewSession</code> (état + <code>rate</code>), testée sans React, à laquelle le hook ne ferait que s’abonner.</p>
+      </li>
+      <li>
+        <h3>L’UI lit le domaine sans passer par l’application</h3>
+        <p><code>cardStatus</code>, <code>searchCards</code>, <code>summarizeDeckProgress</code>, <code>isInterviewUnlocked</code> sont appelées depuis les écrans. Ce sont des fonctions pures en lecture seule, donc sans danger, mais c’est un raccourci par rapport à un hexagone strict.</p>
+      </li>
+      <li>
+        <h3>Peu de tests d’interface</h3>
+        <p>Un seul fichier de test côté UI (<code>format.spec.ts</code>). La session, la navigation et le retour navigateur n’ont été vérifiés qu’à la main et par des captures. Piste : Testing Library sur <code>ReviewSession</code> et <code>useAppNavigation</code>.</p>
+      </li>
+      <li>
+        <h3>Les types du runtime d’artefact sont écrits à la main</h3>
+        <p><code>artifact-runtime.ts</code> décrit à la main la base, l’identité et <code>sample</code>. Si le contrat du runtime change, ce fichier est le seul à adapter, mais rien ne le signalera à la compilation.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="path-title">
+    <div class="section__head reading">
+      <h2 id="path-title">Parcours de lecture</h2>
+      <p class="section__lead">Un ordre pour lire le code demain, du centre vers l’extérieur. Compte une à deux heures.</p>
+    </div>
+    <ol class="path reading">
+      <li><span class="files">domain/deck.ts · domain/review.ts</span><p>Le vocabulaire : <code>Card</code> (union discriminée sur <code>kind</code>), <code>Deck</code>, <code>CardProgress</code>, <code>Rating</code>.</p></li>
+      <li><span class="files">domain/today-queue.ts + today-queue.spec.ts</span><p>La règle centrale : journée à 4 h, file du jour, deck par deck, quota. Lis les tests en même temps, ils racontent les cas limites.</p></li>
+      <li><span class="files">application/ports/*.ts · application/today-review.ts</span><p>Ce que l’appli attend du monde extérieur, et le cas d’usage principal.</p></li>
+      <li><span class="files">composition-root.ts · main.tsx · ui/App.tsx</span><p>Où tout est branché, et comment la promesse de démarrage arrive dans React.</p></li>
+      <li><span class="files">infrastructure/scheduling/fsrs-scheduler.ts</span><p>Comment FSRS est enfermé derrière le port, avec son état validé par Zod.</p></li>
+      <li><span class="files">infrastructure/progress/* · infrastructure/deck-file/*</span><p>Documents stockés, validation, et la différence base de l’artefact / navigateur.</p></li>
+      <li><span class="files">ui/Rekall.tsx · ui/shell/useAppNavigation.ts</span><p>L’assemblage des écrans, <code>&lt;Activity&gt;</code> et le retour navigateur.</p></li>
+      <li><span class="files">ui/today/useTodaySession.ts · ui/today/ReviewSession.tsx</span><p>La session de bout en bout, raccourcis clavier compris.</p></li>
+      <li><span class="files">ui/interview/* · infrastructure/grading/claude-answer-grader.ts</span><p>Le mode entretien et la correction par Claude, avec son repli.</p></li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="run-title">
+    <div class="section__head reading">
+      <h2 id="run-title">Lancer le projet</h2>
+      <p class="section__lead">En local, la progression va dans le navigateur et la correction par Claude est remplacée par la grille : seul l’artefact publié a la base et <code>sample</code>.</p>
+    </div>
+    <pre><span class="c"># Node 24, depuis le dossier du projet</span>
+npm install
+npm run dev              <span class="c"># http://localhost:5173</span>
+npm test                 <span class="c"># Vitest, 67 tests</span>
+npm run typecheck        <span class="c"># tsc --noEmit</span>
+npm run build:artifact   <span class="c"># artifact/index.html + artifact/decks, prêts à publier</span></pre>
+  </section>
+</main>
+
+<script>
+const LAYERS = {
+  ui: ['UI', 'layer-ui'],
+  app: ['Application', 'layer-app'],
+  domain: ['Domaine', 'layer-domain'],
+  port: ['Port', 'layer-app'],
+  infra: ['Adaptateur', 'layer-infra'],
+  wire: ['Composition root', 'layer-wire'],
+};
+
+const NODES = {
+  ui: {
+    layer: 'ui', title: 'UI React',
+    role: 'Affiche les écrans, capte les gestes et tient l’état d’écran. Elle appelle les cas d’usage et lit quelques fonctions pures du domaine.',
+    files: ['ui/Rekall.tsx — racine, session du jour, écrans', 'ui/shell/useAppNavigation.ts — onglets, écran par-dessus, historique, défilement', 'ui/today/useTodaySession.ts — état de la session (useReducer)', 'ui/home, ui/library, ui/today, ui/interview — les écrans', 'ui/styles.css — jetons clair et sombre'],
+    why: 'React 19 : use() + Suspense pour le démarrage, useEffectEvent pour les raccourcis, useActionState pour le signalement, <Activity> pour garder les onglets montés.',
+    tests: 'format.spec.ts (dates et intervalles).',
+  },
+  application: {
+    layer: 'app', title: 'Application',
+    role: 'Les cas d’usage. Ils orchestrent le domaine et les ports, sans savoir quels adaptateurs sont derrière.',
+    files: ['application/today-review.ts', 'application/interview-practice.ts', 'application/ports/*.ts — les 5 interfaces'],
+    why: 'Séparer « ce que l’appli fait » de « avec quoi elle le fait » : on teste les cas d’usage avec des faux en mémoire.',
+    tests: 'today-review.spec.ts, avec un planificateur factice.',
+  },
+  todayReview: {
+    layer: 'app', title: 'TodayReview',
+    role: 'Le cas d’usage de la révision du jour : loadToday, previewDueDates, rate, report.',
+    files: ['application/today-review.ts'],
+    why: 'loadToday écarte la progression des cartes retirées d’un deck, pour qu’elle ne soit comptée nulle part.',
+    tests: 'today-review.spec.ts',
+  },
+  interviewPractice: {
+    layer: 'app', title: 'InterviewPractice',
+    role: 'Le cas d’usage du mode entretien : tirer 5 questions parmi les cartes vues et faire corriger une réponse.',
+    files: ['application/interview-practice.ts'],
+    why: 'Il reçoit un correcteur ou null : sans Claude, canGrade vaut false et l’écran propose la grille. L’entretien ne touche jamais à la répétition espacée.',
+    tests: 'interview.spec.ts côté domaine (tirage, seuil, note).',
+  },
+  domain: {
+    layer: 'domain', title: 'Domaine',
+    role: 'Les règles de Rekall, en fonctions pures et en types. Rien d’autre que du TypeScript.',
+    files: ['deck.ts — Card (union discriminée), Deck, contrôles de cohérence', 'review.ts — Rating, CardProgress, schedulerState opaque', 'today-queue.ts — journée à 4 h, file du jour, deck par deck', 'interview.ts — seuil de 20 cartes, tirage, note', 'card-search.ts · card-status.ts · deck-progress.ts · card-report.ts'],
+    why: 'Le cœur ne dépend de rien : il survit à un changement de framework, de stockage ou d’algorithme.',
+    tests: '5 fichiers : today-queue, interview, card-search, card-status, deck-progress.',
+  },
+  scheduler: {
+    layer: 'port', title: 'Scheduler',
+    role: 'Calcule la progression obtenue pour chacune des quatre notes, si la carte est révisée maintenant.',
+    files: ['application/ports/scheduler.ts'],
+    why: 'Les boutons affichent l’échéance de chaque note avant le clic : un seul appel donne les quatre issues.',
+    tests: 'fsrs-scheduler.spec.ts côté adaptateur.',
+  },
+  progress: {
+    layer: 'port', title: 'ProgressRepository',
+    role: 'Lit toute la progression de l’utilisateur et enregistre celle d’une carte.',
+    files: ['application/ports/progress-repository.ts'],
+    why: 'Deux adaptateurs : la base de l’artefact quand elle est servie, sinon le navigateur.',
+    tests: 'local-storage-progress-repository.spec.ts',
+  },
+  reports: {
+    layer: 'port', title: 'CardReportRepository',
+    role: 'Enregistre un signalement (fausse, floue, autre + commentaire).',
+    files: ['application/ports/card-report-repository.ts', 'domain/card-report.ts'],
+    why: 'Les signalements partent dans une collection partagée que Claude relit pour corriger les cartes.',
+    tests: '—',
+  },
+  decks: {
+    layer: 'port', title: 'DeckSource',
+    role: 'Charge tous les decks listés dans l’index.',
+    files: ['application/ports/deck-source.ts'],
+    why: 'Le moteur ne sait rien de React ou de JavaScript : il reçoit des Deck déjà validés.',
+    tests: 'parse-deck-file.spec.ts, published-decks.spec.ts',
+  },
+  grader: {
+    layer: 'port', title: 'AnswerGrader',
+    role: 'Corrige une réponse d’entretien au regard des points clés de la carte.',
+    files: ['application/ports/answer-grader.ts'],
+    why: 'AnswerGradingError distingue « indisponible pour la visite » (on passe à la grille) d’« échec ponctuel » (on peut réessayer).',
+    tests: 'claude-answer-grader.spec.ts',
+  },
+  fsrs: {
+    layer: 'infra', title: 'FsrsScheduler',
+    role: 'Adaptateur de la librairie ts-fsrs : 90 % de rétention visée, étapes d’apprentissage de 1 et 10 minutes.',
+    files: ['infrastructure/scheduling/fsrs-scheduler.ts'],
+    why: 'Seul fichier qui importe ts-fsrs. Son état est stocké dans schedulerState et revalidé par Zod à la lecture.',
+    tests: 'fsrs-scheduler.spec.ts',
+  },
+  progressDb: {
+    layer: 'infra', title: 'Base de l’artefact (progression)',
+    role: 'ArtifactDbProgressRepository : un document par carte sous data/users/<id>/progress/cards/<cardId>.',
+    files: ['infrastructure/progress/artifact-db-progress-repository.ts', 'infrastructure/progress/progress-document.ts — schéma Zod, dates ISO'],
+    why: 'data/users/<id>/ est privé à chaque utilisateur et suit ses appareils.',
+    tests: 'Vérifié en lisant la base avec ArtifactData.',
+  },
+  progressLocal: {
+    layer: 'infra', title: 'localStorage (progression)',
+    role: 'LocalStorageProgressRepository : tout sous la clé revisions-tech:progress:v1.',
+    files: ['infrastructure/progress/local-storage-progress-repository.ts', 'infrastructure/browser-storage.ts — repli en mémoire si localStorage est bloqué'],
+    why: 'Permet de développer avec npm run dev, hors de l’artefact.',
+    tests: 'local-storage-progress-repository.spec.ts',
+  },
+  reportsDb: {
+    layer: 'infra', title: 'Base de l’artefact (signalements)',
+    role: 'ArtifactDbCardReportRepository : collection partagée reports/<id auto>.',
+    files: ['infrastructure/card-report/artifact-db-card-report-repository.ts', 'infrastructure/card-report/card-report-document.ts'],
+    why: 'Partagée et non privée : c’est ce que Claude lit pour corriger les cartes.',
+    tests: '—',
+  },
+  reportsLocal: {
+    layer: 'infra', title: 'localStorage (signalements)',
+    role: 'LocalStorageCardReportRepository : clé revisions-tech:card-reports:v1.',
+    files: ['infrastructure/card-report/local-storage-card-report-repository.ts'],
+    why: 'Repli de développement.',
+    tests: '—',
+  },
+  fetchDecks: {
+    layer: 'infra', title: 'FetchDeckSource',
+    role: 'Lit decks/index.json, puis chaque deck listé, et les fait passer par Zod et les contrôles de cohérence.',
+    files: ['infrastructure/deck-file/fetch-deck-source.ts', 'infrastructure/deck-file/deck-file-schemas.ts — strictObject partout', 'infrastructure/deck-file/parse-deck-file.ts'],
+    why: 'Un deck invalide donne une erreur lisible (« cards[3].question : … ») au lieu d’une appli à moitié cassée.',
+    tests: 'parse-deck-file.spec.ts, published-decks.spec.ts',
+  },
+  claude: {
+    layer: 'infra', title: 'ClaudeAnswerGrader',
+    role: 'Envoie la question, les points clés et la réponse à Claude via la capacité sample, et valide la correction reçue avec Zod.',
+    files: ['infrastructure/grading/claude-answer-grader.ts', 'infrastructure/artifact-runtime/artifact-runtime.ts'],
+    why: 'Les codes d’erreur du runtime (autorisation refusée, capacité absente…) deviennent « indisponible » ; le reste devient « échec », qu’on peut réessayer.',
+    tests: 'claude-answer-grader.spec.ts',
+  },
+  composition: {
+    layer: 'wire', title: 'composition-root.ts',
+    role: 'startApp() connecte le runtime, choisit les adaptateurs, crée TodayReview et InterviewPractice, charge la journée et renvoie l’AppContext.',
+    files: ['composition-root.ts', 'main.tsx — crée la promesse une seule fois, hors du rendu'],
+    why: 'Le seul endroit qui connaît à la fois les cas d’usage et les adaptateurs. C’est là que vit aussi le quota de 15 nouvelles cartes par jour.',
+    tests: 'Couvert indirectement par l’appli lancée.',
+  },
+};
+
+const detailLayer = document.getElementById('detail-layer');
+const detailTitle = document.getElementById('detail-title');
+const detailRole = document.getElementById('detail-role');
+const detailBody = document.getElementById('detail-body');
+const nodes = [...document.querySelectorAll('.node')];
+
+function field(label, content) {
+  const wrapper = document.createElement('div');
+  const term = document.createElement('dt');
+  term.textContent = label;
+  const value = document.createElement('dd');
+  value.append(content);
+  wrapper.append(term, value);
+  return wrapper;
+}
+
+function fileList(files) {
+  const list = document.createElement('ul');
+  for (const file of files) {
+    const item = document.createElement('li');
+    const [path, note] = file.split(' — ');
+    const code = document.createElement('code');
+    code.textContent = path;
+    item.append(code);
+    if (note) item.append(` — ${note}`);
+    list.append(item);
+  }
+  return list;
+}
+
+const detailPanel = detailTitle.closest('.detail');
+const sideBySide = window.matchMedia('(min-width: 1360px)');
+
+function select(id, { reveal = false } = {}) {
+  const node = NODES[id];
+  if (!node) return;
+  const [layerName, layerClass] = LAYERS[node.layer];
+  detailLayer.textContent = layerName;
+  detailLayer.className = `detail__layer ${layerClass}`;
+  detailTitle.textContent = node.title;
+  detailRole.textContent = node.role;
+  detailBody.replaceChildren(
+    field('Fichiers', fileList(node.files)),
+    field('Pourquoi', node.why),
+    field('Tests', node.tests),
+  );
+  for (const element of nodes) element.setAttribute('aria-pressed', String(element.dataset.node === id));
+  // Panneau sous le schéma : on l'amène à l'écran pour que le clic ait un effet visible.
+  if (reveal && !sideBySide.matches) detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+for (const element of nodes) {
+  element.addEventListener('click', (event) => {
+    event.stopPropagation();
+    select(element.dataset.node, { reveal: true });
+  });
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      select(element.dataset.node, { reveal: true });
+    }
+  });
+}
+
+select('domain');
+</script>
