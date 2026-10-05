@@ -268,7 +268,7 @@ pre .c { color: var(--muted); }
       <li><strong>5</strong> ports</li>
       <li><strong>7</strong> adaptateurs</li>
       <li><strong>3 400</strong> lignes de TypeScript</li>
-      <li><strong>67</strong> tests</li>
+      <li><strong>80</strong> tests</li>
     </ul>
   </header>
 
@@ -591,16 +591,12 @@ pre .c { color: var(--muted); }
     </div>
     <ul class="critique reading">
       <li>
-        <h3>La session vit dans un hook d’UI</h3>
-        <p><code>useTodaySession</code> appelle directement <code>advanceTodayQueue</code> et <code>countDueTomorrow</code> : une partie du cas d’usage « réviser » est côté React. Alternative : une classe applicative <code>ReviewSession</code> (état + <code>rate</code>), testée sans React, à laquelle le hook ne ferait que s’abonner.</p>
-      </li>
-      <li>
         <h3>L’UI lit le domaine sans passer par l’application</h3>
         <p><code>cardStatus</code>, <code>searchCards</code>, <code>summarizeDeckProgress</code>, <code>isInterviewUnlocked</code> sont appelées depuis les écrans. Ce sont des fonctions pures en lecture seule, donc sans danger, mais c’est un raccourci par rapport à un hexagone strict.</p>
       </li>
       <li>
-        <h3>Peu de tests d’interface</h3>
-        <p>Un seul fichier de test côté UI (<code>format.spec.ts</code>). La session, la navigation et le retour navigateur n’ont été vérifiés qu’à la main et par des captures. Piste : Testing Library sur <code>ReviewSession</code> et <code>useAppNavigation</code>.</p>
+        <h3>Les tests d’interface passent par l’appli entière</h3>
+        <p><code>Rekall.spec.tsx</code> rend toute l’appli avec des adaptateurs en mémoire et la pilote par rôles et libellés. C’est robuste aux refontes visuelles, mais un échec pointe un parcours, pas un composant. Ne pas en multiplier les cas : les règles se testent dans le domaine.</p>
       </li>
       <li>
         <h3>Les types du runtime d’artefact sont écrits à la main</h3>
@@ -635,7 +631,7 @@ pre .c { color: var(--muted); }
     <pre><span class="c"># Node 24, depuis le dossier du projet</span>
 npm install
 npm run dev              <span class="c"># http://localhost:5173</span>
-npm test                 <span class="c"># Vitest, 67 tests</span>
+npm test                 <span class="c"># Vitest, 80 tests</span>
 npm run typecheck        <span class="c"># tsc --noEmit</span>
 npm run build:artifact   <span class="c"># artifact/index.html + artifact/decks, prêts à publier</span></pre>
   </section>
@@ -655,9 +651,9 @@ const NODES = {
   ui: {
     layer: 'ui', title: 'UI React',
     role: 'Affiche les écrans, capte les gestes et tient l’état d’écran. Elle appelle les cas d’usage et lit quelques fonctions pures du domaine.',
-    files: ['ui/Rekall.tsx — racine, session du jour, écrans', 'ui/shell/useAppNavigation.ts — onglets, écran par-dessus, historique, défilement', 'ui/today/useTodaySession.ts — état de la session (useReducer)', 'ui/home, ui/library, ui/today, ui/interview — les écrans', 'ui/styles.css — jetons clair et sombre'],
+    files: ['ui/Rekall.tsx — racine, session du jour, écrans', 'ui/shell/useAppNavigation.ts — onglets, écran par-dessus, historique, défilement', 'ui/today/useTodaySession.ts — branche la session du domaine sur React (useReducer) et enregistre les notes', 'ui/home, ui/library, ui/today, ui/interview — les écrans', 'ui/styles.css — jetons clair et sombre'],
     why: 'React 19 : use() + Suspense pour le démarrage, useEffectEvent pour les raccourcis, useActionState pour le signalement, <Activity> pour garder les onglets montés.',
-    tests: 'format.spec.ts (dates et intervalles).',
+    tests: 'Rekall.spec.tsx : parcours complets avec Testing Library (session, échec d’enregistrement, bibliothèque et retour navigateur, entretien sans Claude) ; format.spec.ts.',
   },
   application: {
     layer: 'app', title: 'Application',
@@ -683,9 +679,9 @@ const NODES = {
   domain: {
     layer: 'domain', title: 'Domaine',
     role: 'Les règles de Rekall, en fonctions pures et en types. Rien d’autre que du TypeScript.',
-    files: ['deck.ts — Card (union discriminée), Deck, contrôles de cohérence', 'review.ts — Rating, CardProgress, schedulerState opaque', 'today-queue.ts — journée à 4 h, file du jour, deck par deck', 'interview.ts — seuil de 20 cartes, tirage, note', 'card-search.ts · card-status.ts · deck-progress.ts · card-report.ts'],
+    files: ['deck.ts — Card (union discriminée), Deck, contrôles de cohérence', 'review.ts — Rating, CardProgress, schedulerState opaque', 'today-queue.ts — journée à 4 h, file du jour, deck par deck', 'review-session.ts — révéler, noter, passer à la suivante, compteurs de la session', 'interview.ts — seuil de 20 cartes, tirage, note', 'card-search.ts · card-status.ts · deck-progress.ts · card-report.ts'],
     why: 'Le cœur ne dépend de rien : il survit à un changement de framework, de stockage ou d’algorithme.',
-    tests: '5 fichiers : today-queue, interview, card-search, card-status, deck-progress.',
+    tests: '6 fichiers : today-queue, review-session, interview, card-search, card-status, deck-progress.',
   },
   scheduler: {
     layer: 'port', title: 'Scheduler',
