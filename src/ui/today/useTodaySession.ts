@@ -1,59 +1,49 @@
 import { useReducer, useState } from 'react';
 import type { TodayReview, TodaySnapshot } from '../../application/today-review';
-import type { Card } from '../../domain/deck';
 import type { CardProgress, Rating } from '../../domain/review';
-import { advanceTodayQueue, countDueTomorrow, type TodayQueue } from '../../domain/today-queue';
-
-type SessionState = {
-  readonly queue: TodayQueue;
-  readonly progressByCardId: ReadonlyMap<string, CardProgress>;
-  /** Moment où la réponse a été révélée ; sert de référence aux intervalles affichés. */
-  readonly revealedAt: Date | null;
-};
+import {
+  currentCardOf,
+  recordRating,
+  revealAnswer,
+  startReviewSession,
+  summarizeReviewSession,
+  type ReviewSession,
+} from '../../domain/review-session';
 
 type SessionAction = { readonly type: 'revealed'; readonly at: Date } | { readonly type: 'rated'; readonly progress: CardProgress; readonly at: Date };
 
-function sessionReducer(state: SessionState, action: SessionAction): SessionState {
+/** Le reducer ne fait que router vers les règles du domaine : il n'en contient aucune. */
+function sessionReducer(session: ReviewSession, action: SessionAction): ReviewSession {
   switch (action.type) {
     case 'revealed':
-      return state.revealedAt === null ? { ...state, revealedAt: action.at } : state;
+      return revealAnswer(session, action.at);
     case 'rated':
-      return {
-        queue: advanceTodayQueue(state.queue, action.progress.dueAt, action.at),
-        progressByCardId: new Map(state.progressByCardId).set(action.progress.cardId, action.progress),
-        revealedAt: null,
-      };
+      return recordRating(session, action.progress, action.at);
   }
 }
 
 export type SaveStatus = 'idle' | 'saving' | 'failed';
 
-/** État de la session de révision : carte courante, révélation, notation. */
+/** Branche la session de révision sur React : état, enregistrement asynchrone de la note et son statut. */
 export function useTodaySession(todayReview: TodayReview, snapshot: TodaySnapshot, loadedAt: Date) {
-  const [state, dispatch] = useReducer(sessionReducer, snapshot, (initial): SessionState => ({
-    queue: initial.queue,
-    progressByCardId: initial.progressByCardId,
-    revealedAt: null,
-  }));
+  const [session, dispatch] = useReducer(sessionReducer, snapshot, (initial) => startReviewSession(initial.queue, initial.progressByCardId));
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 
-  const currentCard: Card | undefined = state.queue.pending[0];
-  const currentProgress = currentCard === undefined ? undefined : state.progressByCardId.get(currentCard.id);
+  const currentCard = currentCardOf(session);
+  const currentProgress = currentCard === undefined ? undefined : session.progressByCardId.get(currentCard.id);
   const dueDates =
-    currentCard !== undefined && state.revealedAt !== null
-      ? todayReview.previewDueDates(currentCard, currentProgress, state.revealedAt)
+    currentCard !== undefined && session.revealedAt !== null
+      ? todayReview.previewDueDates(currentCard, currentProgress, session.revealedAt)
       : null;
-
-  const isNew = (card: Card): boolean => !state.progressByCardId.has(card.id);
-  const allCards = snapshot.decks.flatMap((deck) => deck.cards);
+  const cards = snapshot.decks.flatMap((deck) => deck.cards);
 
   function reveal(): void {
-    if (currentCard !== undefined) dispatch({ type: 'revealed', at: new Date() });
+    dispatch({ type: 'revealed', at: new Date() });
   }
 
   /** Enregistre la note ; renvoie false si l'enregistrement a échoué (la carte reste affichée). */
   async function rate(rating: Rating): Promise<boolean> {
-    if (currentCard === undefined || state.revealedAt === null || saveStatus === 'saving') return false;
+    if (currentCard === undefined || session.revealedAt === null || saveStatus === 'saving') return false;
     setSaveStatus('saving');
     try {
       const now = new Date();
@@ -69,20 +59,15 @@ export function useTodaySession(todayReview: TodayReview, snapshot: TodaySnapsho
   }
 
   return {
+    ...summarizeReviewSession(session, cards, loadedAt),
     currentCard,
-    revealedAt: state.revealedAt,
+    revealedAt: session.revealedAt,
     dueDates,
     saveStatus,
     reveal,
     rate,
-    reviewedCount: state.queue.reviewedCount,
-    remainingNewCount: state.queue.pending.filter(isNew).length,
-    remainingReviewCount: state.queue.pending.filter((card) => !isNew(card)).length,
-    dueTomorrow: countDueTomorrow(state.progressByCardId, loadedAt),
-    unseenCount: allCards.filter(isNew).length,
-    seenCardCount: state.progressByCardId.size,
-    progressByCardId: state.progressByCardId,
-    cards: allCards,
+    progressByCardId: session.progressByCardId,
+    cards,
   };
 }
 
