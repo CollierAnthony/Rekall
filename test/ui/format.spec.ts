@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDueLabel, formatInterval, formatSourceHost } from './format';
+import { formatDueLabel, formatInterval, formatSourceHost } from '../../src/ui/format';
 
 const from = new Date('2026-10-01T08:00:00Z');
 const after = (milliseconds: number): Date => new Date(from.getTime() + milliseconds);

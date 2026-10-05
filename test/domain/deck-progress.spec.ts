@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Card, Deck } from './deck';
-import { summarizeDeckProgress } from './deck-progress';
-import type { CardProgress } from './review';
+import type { Card, Deck } from '../../src/domain/deck';
+import { summarizeDeckProgress } from '../../src/domain/deck-progress';
+import type { CardProgress } from '../../src/domain/review';
 
 const aCard = (id: string): Card => ({
   id,

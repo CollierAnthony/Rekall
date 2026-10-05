@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { CardProgress } from '../../domain/review';
-import { inMemoryStorage } from '../browser-storage';
-import { LocalStorageProgressRepository } from './local-storage-progress-repository';
+import type { CardProgress } from '../../../src/domain/review';
+import { inMemoryStorage } from '../../../src/infrastructure/browser-storage';
+import { LocalStorageProgressRepository } from '../../../src/infrastructure/progress/local-storage-progress-repository';
 
 const aProgress = (cardId: string, dueAt: string): CardProgress => ({
   cardId,

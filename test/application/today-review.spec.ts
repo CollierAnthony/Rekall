@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { CardReport } from '../domain/card-report';
-import type { Card, Deck } from '../domain/deck';
-import type { CardProgress, Rating } from '../domain/review';
-import type { Scheduler } from './ports/scheduler';
-import { TodayReview } from './today-review';
+import type { CardReport } from '../../src/domain/card-report';
+import type { Card, Deck } from '../../src/domain/deck';
+import type { CardProgress, Rating } from '../../src/domain/review';
+import type { Scheduler } from '../../src/application/ports/scheduler';
+import { TodayReview } from '../../src/application/today-review';
 
 const now = new Date(2026, 9, 1, 9, 0);
 

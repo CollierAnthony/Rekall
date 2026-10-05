@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AnswerGradingError } from '../../application/ports/answer-grader';
-import type { Card } from '../../domain/deck';
-import type { ArtifactSample } from '../artifact-runtime/artifact-runtime';
-import { buildGradingPrompt, ClaudeAnswerGrader } from './claude-answer-grader';
+import { AnswerGradingError } from '../../../src/application/ports/answer-grader';
+import type { Card } from '../../../src/domain/deck';
+import type { ArtifactSample } from '../../../src/infrastructure/artifact-runtime/artifact-runtime';
+import { buildGradingPrompt, ClaudeAnswerGrader } from '../../../src/infrastructure/grading/claude-answer-grader';
 
 const card: Card = {
   id: 'react.useEffect.cleanup',

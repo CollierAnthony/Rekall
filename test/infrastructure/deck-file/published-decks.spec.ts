@@ -1,8 +1,8 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseDeckFile } from './parse-deck-file';
-import { parseDeckIndexFile } from './parse-deck-index-file';
+import { parseDeckFile } from '../../../src/infrastructure/deck-file/parse-deck-file';
+import { parseDeckIndexFile } from '../../../src/infrastructure/deck-file/parse-deck-index-file';
 
 // Garde-fou sur le contenu : chaque deck publié doit passer le même parseur que l'appli.
 const decksDirectory = new URL('../../../public/decks/', import.meta.url);

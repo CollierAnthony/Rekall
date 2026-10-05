@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Card, CardDifficulty, Deck } from './deck';
-import type { CardProgress } from './review';
-import { advanceTodayQueue, composeTodayQueue, countDueTomorrow, countReviewedToday, startOfNextReviewDay, startOfReviewDay } from './today-queue';
+import type { Card, CardDifficulty, Deck } from '../../src/domain/deck';
+import type { CardProgress } from '../../src/domain/review';
+import { advanceTodayQueue, composeTodayQueue, countDueTomorrow, countReviewedToday, startOfNextReviewDay, startOfReviewDay } from '../../src/domain/today-queue';
 
 // Dates locales : la journée de révision commence à 4 h dans le fuseau du navigateur.
 const now = new Date(2026, 9, 1, 9, 0);

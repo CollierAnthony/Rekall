@@ -31,6 +31,7 @@ src/
   infrastructure/   adaptateurs : FSRS, base de l'artefact, localStorage, decks JSON, correcteur Claude
   ui/               React : shell (onglets, navigation), today, library, interview, home
   composition-root.ts   seul fichier qui connaît tout : choisit les adaptateurs, crée les cas d'usage
+test/               tests Vitest, même arborescence que src/ (src/domain/x.ts → test/domain/x.spec.ts)
 public/decks/       contenu : un JSON par techno + index.json (ordre d'introduction)
 scripts/            build-artifact-page.mjs (assemble la page publiée)
 ```

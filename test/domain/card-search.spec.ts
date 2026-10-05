@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildCardSearchIndex, searchCards } from './card-search';
-import type { Card } from './deck';
+import { buildCardSearchIndex, searchCards } from '../../src/domain/card-search';
+import type { Card } from '../../src/domain/deck';
 
 const aCard = (id: string, question: string, answer = 'Réponse', keyPoints: string[] = ['Point clé']): Card => ({
   id,

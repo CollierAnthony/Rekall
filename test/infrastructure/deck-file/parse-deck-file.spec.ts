@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { InvalidDeckFileError } from './invalid-deck-file-error';
-import { parseDeckFile } from './parse-deck-file';
+import { InvalidDeckFileError } from '../../../src/infrastructure/deck-file/invalid-deck-file-error';
+import { parseDeckFile } from '../../../src/infrastructure/deck-file/parse-deck-file';
 
 const aRawCard = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   id: 'react.useEffect.cleanup',

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cardStatus } from './card-status';
-import type { CardProgress } from './review';
+import { cardStatus } from '../../src/domain/card-status';
+import type { CardProgress } from '../../src/domain/review';
 
 const now = new Date(2026, 9, 1, 18, 0);
 

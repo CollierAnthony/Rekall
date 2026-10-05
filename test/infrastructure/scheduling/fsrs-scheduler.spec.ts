@@ -1,7 +1,7 @@
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs';
 import { describe, expect, it } from 'vitest';
-import type { CardProgress } from '../../domain/review';
-import { FsrsScheduler } from './fsrs-scheduler';
+import type { CardProgress } from '../../../src/domain/review';
+import { FsrsScheduler } from '../../../src/infrastructure/scheduling/fsrs-scheduler';
 
 const minutes = (count: number): number => count * 60_000;
 const days = (count: number): number => count * 86_400_000;

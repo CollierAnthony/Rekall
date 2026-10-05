@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Card } from './deck';
-import { drawInterviewCards, gradeFromCoveredIndexes, INTERVIEW_UNLOCK_THRESHOLD, isInterviewUnlocked } from './interview';
+import type { Card } from '../../src/domain/deck';
+import { drawInterviewCards, gradeFromCoveredIndexes, INTERVIEW_UNLOCK_THRESHOLD, isInterviewUnlocked } from '../../src/domain/interview';
 
 const aCard = (name: string, keyPoints: string[] = ['Point clé']): Card => ({
   id: `react.${name}`,
