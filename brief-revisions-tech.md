@@ -172,5 +172,6 @@ Retours de la première utilisation, traités :
 2. ~~MVP : moteur + écran « Aujourd'hui » + « Signaler une carte », publié en artefact.~~ Fait le 01/10/2026.
 3. ~~Mode entretien dans l'appli.~~ Fait le 01/10/2026.
 4. ~~Refonte UX/UI : maquette dans Claude Design, puis implémentation.~~ Faite le 01/10/2026 (voir Refonte Studio).
-5. ~~Deck JavaScript~~ fait le 01/10/2026 : 60 cartes, 8 modules, sources MDN, ES2026. Puis deck TypeScript.
+5. ~~Deck JavaScript~~ fait le 01/10/2026 : 60 cartes, 8 modules, sources MDN, ES2026.
+   ~~Deck TypeScript~~ fait le 04/10/2026 : 60 cartes, 8 modules (fondamentaux, narrowing, fonctions, objets & classes, génériques, manipulation de types, utility types, modules & configuration), sources typescriptlang.org et annonce TS 7.0, version 7.0, snippets vérifiés avec tsc 7.0.2. Prochain deck : Node.
 6. ~~Section Bibliothèque (avec la navigation)~~ faite le 01/10/2026 (version 7 de l'artefact). Puis Pratique et Guides.
