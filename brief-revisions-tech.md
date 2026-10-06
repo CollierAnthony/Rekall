@@ -173,5 +173,6 @@ Retours de la première utilisation, traités :
 3. ~~Mode entretien dans l'appli.~~ Fait le 01/10/2026.
 4. ~~Refonte UX/UI : maquette dans Claude Design, puis implémentation.~~ Faite le 01/10/2026 (voir Refonte Studio).
 5. ~~Deck JavaScript~~ fait le 01/10/2026 : 60 cartes, 8 modules, sources MDN, ES2026.
-   ~~Deck TypeScript~~ fait le 04/10/2026 : 60 cartes, 8 modules (fondamentaux, narrowing, fonctions, objets & classes, génériques, manipulation de types, utility types, modules & configuration), sources typescriptlang.org et annonce TS 7.0, version 7.0, snippets vérifiés avec tsc 7.0.2. Prochain deck : Node.
+   ~~Deck TypeScript~~ fait le 04/10/2026 : 60 cartes, 8 modules (fondamentaux, narrowing, fonctions, objets & classes, génériques, manipulation de types, utility types, modules & configuration), sources typescriptlang.org et annonce TS 7.0, version 7.0, snippets vérifiés avec tsc 7.0.2. 
+   ~~Deck Vue.js~~ fait le 06/10/2026 (demandé avant Node) : 60 cartes, 8 modules (réactivité, computed & watchers, composants, templates, Composition API, rendu, Pinia & Vue Router, TypeScript/tests/perf), sources vuejs.org, pinia.vuejs.org, router.vuejs.org, version 3.5 (3.6 encore en RC), snippets exécutés avec Vitest + jsdom sur vue 3.5.43. Prochain deck : Node.
 6. ~~Section Bibliothèque (avec la navigation)~~ faite le 01/10/2026 (version 7 de l'artefact). Puis Pratique et Guides.

@@ -1,0 +1,1411 @@
+{
+  "id": "vue",
+  "title": "Vue.js",
+  "version": "3.5",
+  "modules": [
+    {
+      "id": "reactivity",
+      "title": "Réactivité"
+    },
+    {
+      "id": "computed-watchers",
+      "title": "Computed & watchers"
+    },
+    {
+      "id": "components",
+      "title": "Composants : props, events, slots"
+    },
+    {
+      "id": "templates",
+      "title": "Templates & directives"
+    },
+    {
+      "id": "composition-api",
+      "title": "Composition API & composables"
+    },
+    {
+      "id": "rendering",
+      "title": "Rendu & composants intégrés"
+    },
+    {
+      "id": "ecosystem",
+      "title": "Pinia & Vue Router"
+    },
+    {
+      "id": "quality",
+      "title": "TypeScript, tests & performance"
+    }
+  ],
+  "cards": [
+    {
+      "id": "vue.reactivity.refVsReactive",
+      "moduleId": "reactivity",
+      "kind": "compare",
+      "question": "ref() ou reactive() : quelle différence, et lequel la doc recommande-t-elle ?",
+      "answer": "ref() accepte n'importe quelle valeur, primitives comprises, et l'expose via .value ; reactive() ne prend que des objets (objets, tableaux, Map, Set) et renvoie un Proxy qu'on manipule directement. reactive() a des limites : on ne peut pas remplacer l'objet entier ni le destructurer sans perdre la réactivité. À cause de ces limites, la doc recommande ref() comme API principale pour déclarer du state réactif.",
+      "details": "const count = ref(0)\ncount.value++\n\nconst state = reactive({ count: 0 })\nstate.count++\n\nUne ref qui reçoit un objet le rend lui-même profondément réactif (via reactive()), donc ref() couvre aussi les objets.",
+      "keyPoints": [
+        "ref() : toute valeur, primitives incluses, accès via .value",
+        "reactive() : objets, tableaux, Map/Set seulement, renvoie un Proxy",
+        "reactive() : pas de remplacement de l'objet, pas de destructuration sans perte de réactivité",
+        "Recommandation officielle : ref() comme API principale"
+      ],
+      "pitfalls": [
+        "Croire qu'il faut reactive() dès qu'on a un objet : ref({ ... }) est aussi profondément réactif"
+      ],
+      "source": {
+        "title": "Reactivity Fundamentals – Limitations of reactive()",
+        "url": "https://vuejs.org/guide/essentials/reactivity-fundamentals.html#limitations-of-reactive"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.reactivity.templateUnwrapping",
+      "moduleId": "reactivity",
+      "kind": "recall",
+      "question": "Pourquoi n'écrit-on pas .value dans un template, et quelle est la limite de cet unwrapping automatique ?",
+      "answer": "Par commodité, Vue unwrap automatiquement les refs utilisées dans le template, donc {{ count }} suffit. Mais cet unwrapping ne s'applique qu'aux refs qui sont des propriétés top-level du contexte de rendu. Avec const object = { id: ref(1) }, {{ object.id + 1 }} affiche « [object Object]1 », car object.id reste un objet ref ; il faut destructurer id pour le rendre top-level.",
+      "details": "const count = ref(0)\nconst object = { id: ref(1) }\nconst { id } = object\n\n{{ count + 1 }}      -> 1\n{{ object.id + 1 }}  -> [object Object]1\n{{ id + 1 }}         -> 2\n{{ object.id }}      -> 1 (simple confort de l'interpolation, équivaut à object.id.value)\n\nCôté JS : une ref est aussi unwrap quand elle est propriété d'un objet reactive(), mais pas quand elle est élément d'un tableau réactif ou d'une Map (books[0].value).",
+      "keyPoints": [
+        "Refs unwrap automatiquement dans le template : pas de .value",
+        "Seulement pour les refs top-level du contexte de rendu",
+        "{{ object.id + 1 }} donne « [object Object]1 »",
+        "Solution : destructurer pour rendre la ref top-level",
+        "{{ object.id }} seul s'affiche bien : simple confort de l'interpolation"
+      ],
+      "pitfalls": [
+        "Conclure que object.id est unwrap parce que {{ object.id }} affiche 1 : ça casse dès qu'on fait une expression"
+      ],
+      "source": {
+        "title": "Reactivity Fundamentals – Caveat when Unwrapping in Templates",
+        "url": "https://vuejs.org/guide/essentials/reactivity-fundamentals.html#caveat-when-unwrapping-in-templates"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.reactivity.howItWorks",
+      "moduleId": "reactivity",
+      "kind": "recall",
+      "question": "Comment fonctionne le système de réactivité de Vue 3 sous le capot ?",
+      "answer": "Vue intercepte la lecture et l'écriture des propriétés : avec un Proxy pour les objets reactive(), et avec un getter/setter sur .value pour les refs. À la lecture, track() enregistre l'effet en cours d'exécution comme abonné de cette propriété ; à l'écriture, trigger() relance tous les effets abonnés. Les abonnements sont stockés dans une WeakMap<target, Map<key, Set<effect>>>, et le rendu d'un composant, un computed ou un watcher sont tous des effets.",
+      "details": "Pseudo-code de la page :\n\nfunction reactive(obj) {\n  return new Proxy(obj, {\n    get(target, key) {\n      track(target, key)\n      return target[key]\n    },\n    set(target, key, value) {\n      target[key] = value\n      trigger(target, key)\n    }\n  })\n}\n\nfunction ref(value) {\n  const refObject = {\n    get value() {\n      track(refObject, 'value')\n      return value\n    },\n    set value(newValue) {\n      value = newValue\n      trigger(refObject, 'value')\n    }\n  }\n  return refObject\n}\n\nLa réactivité de Vue est runtime (faite à l'exécution dans le navigateur), contrairement à une approche compile-time comme Svelte.",
+      "keyPoints": [
+        "reactive() : Proxy ; ref : getter/setter sur .value (Vue 2 : getter/setter uniquement)",
+        "track() à la lecture : abonne l'activeEffect à la propriété",
+        "trigger() à l'écriture : relance les effets abonnés",
+        "Stockage : WeakMap<target, Map<key, Set<effect>>>",
+        "Réactivité runtime, pas compile-time"
+      ],
+      "pitfalls": [
+        "Oublier que le suivi passe par l'accès aux propriétés : c'est ce qui explique les limites de la destructuration"
+      ],
+      "source": {
+        "title": "Reactivity in Depth – How Reactivity Works in Vue",
+        "url": "https://vuejs.org/guide/extras/reactivity-in-depth.html#how-reactivity-works-in-vue"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.reactivity.reactiveLimitations",
+      "moduleId": "reactivity",
+      "kind": "code",
+      "question": "Après ces trois opérations, state.count a-t-il changé, et qu'est-ce qui reste réactif ?",
+      "code": "let state = reactive({ count: 0 })\n\n// 1. destructuration\nlet { count } = state\ncount++\n\n// 2. passage a une fonction\ncallSomeFunction(state.count)\n\n// 3. remplacement\nstate = reactive({ count: 1 })",
+      "answer": "Non : count++ incrémente une variable locale déconnectée, et callSomeFunction ne reçoit qu'un simple nombre, incapable de suivre state.count. Quant au remplacement, la nouvelle variable pointe vers un autre Proxy : tout ce qui suivait l'ancien objet (template, watchers) ne voit plus rien. Le suivi de Vue passe par l'accès aux propriétés, il faut donc garder la même référence et passer l'objet entier, ou utiliser ref() ou toRefs().",
+      "keyPoints": [
+        "Destructurer une primitive : copie locale, plus de lien avec state",
+        "Passer state.count à une fonction : elle reçoit un nombre, pas de suivi",
+        "Remplacer l'objet reactive : la connexion avec l'ancien Proxy est perdue",
+        "Raison : le tracking fonctionne sur l'accès aux propriétés",
+        "Parades : passer l'objet entier, ref(), toRefs()"
+      ],
+      "pitfalls": [
+        "Réassigner state = reactive(...) dans un handler en croyant mettre à jour l'écran"
+      ],
+      "source": {
+        "title": "Reactivity Fundamentals – Limitations of reactive()",
+        "url": "https://vuejs.org/guide/essentials/reactivity-fundamentals.html#limitations-of-reactive"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.reactivity.toRefs",
+      "moduleId": "reactivity",
+      "kind": "recall",
+      "question": "À quoi servent toRef() et toRefs() ?",
+      "answer": "toRefs() convertit un objet reactive en objet simple dont chaque propriété est une ref liée à la propriété d'origine, dans les deux sens. On peut alors destructurer sans perdre la réactivité, typiquement dans le return d'un composable : const { foo, bar } = useFeatureX(). toRef() fait la même chose pour une seule propriété, et depuis 3.3 il normalise aussi une valeur, une ref ou un getter en ref.",
+      "details": "const state = reactive({ foo: 1, bar: 2 })\nconst { foo } = toRefs(state)\n\nstate.foo++\nconsole.log(foo.value) // 2\nfoo.value++\nconsole.log(state.foo) // 3\n\n// 3.3+ : getter, recommandé avec les props\nuseSomeFeature(toRef(() => props.foo)) // ref readonly",
+      "keyPoints": [
+        "toRefs : chaque propriété devient une ref liée à la source",
+        "Lien bidirectionnel : modifier la ref modifie l'objet et inversement",
+        "Usage type : return toRefs(state) dans un composable pour permettre la destructuration",
+        "toRef(obj, 'key') pour une seule propriété",
+        "toRef(() => props.foo) (3.3+) : ref readonly basée sur un getter"
+      ],
+      "pitfalls": [
+        "Confondre toRefs (refs liées) et une copie : ce ne sont pas des valeurs figées"
+      ],
+      "source": {
+        "title": "Reactivity API: Utilities – toRefs()",
+        "url": "https://vuejs.org/api/reactivity-utilities.html#torefs"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.reactivity.shallowRef",
+      "moduleId": "reactivity",
+      "kind": "compare",
+      "question": "ref() ou shallowRef() : quelle différence, et quand choisir shallowRef (ou shallowReactive) ?",
+      "answer": "ref() rend sa valeur profondément réactive, alors que shallowRef() stocke la valeur telle quelle : seul l'accès à .value est réactif, donc state.value.count = 2 ne déclenche rien, il faut remplacer .value ou appeler triggerRef(). La doc le recommande pour optimiser les grosses structures de données et pour intégrer un state externe (Immer, XState) dont Vue ne doit pas proxifier l'intérieur. shallowReactive() est l'équivalent pour reactive : seules les propriétés racines sont réactives.",
+      "details": "const state = shallowRef({ count: 1 })\n\nstate.value.count = 2      // ne declenche rien\nstate.value = { count: 2 } // declenche\n\ntriggerRef(state)          // force les effets apres une mutation profonde\n\nconst s = shallowReactive({ foo: 1, nested: { bar: 2 } })\ns.foo++          // reactif\ns.nested.bar++   // PAS reactif",
+      "keyPoints": [
+        "shallowRef : seul .value est réactif, pas de conversion profonde",
+        "Mutation interne ignorée : remplacer .value ou triggerRef()",
+        "Cas d'usage : grosses structures (performance), state externe (Immer, XState)",
+        "shallowReactive : seules les propriétés racines sont réactives, pas d'unwrap des refs"
+      ],
+      "pitfalls": [
+        "Muter une propriété imbriquée d'un shallowRef et s'étonner que l'écran ne bouge pas",
+        "Imbriquer un shallowReactive dans un objet profondément réactif : la doc le déconseille (comportement incohérent)"
+      ],
+      "source": {
+        "title": "Reactivity API: Advanced – shallowRef()",
+        "url": "https://vuejs.org/api/reactivity-advanced.html#shallowref"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.reactivity.nextTick",
+      "moduleId": "reactivity",
+      "kind": "code",
+      "question": "Qu'affichent les deux console.log après un clic, et pourquoi ?",
+      "code": "<script setup>\nimport { ref, nextTick } from 'vue'\n\nconst count = ref(0)\n\nasync function increment() {\n  count.value++\n  console.log(document.getElementById('counter').textContent)\n  await nextTick()\n  console.log(document.getElementById('counter').textContent)\n}\n</script>\n\n<template>\n  <button id=\"counter\" @click=\"increment\">{{ count }}</button>\n</template>",
+      "answer": "Il affiche 0 puis 1. Quand on modifie le state, Vue n'applique pas la mise à jour du DOM de façon synchrone : il la met en tampon jusqu'au « next tick » pour que chaque composant ne se mette à jour qu'une fois, quel que soit le nombre de changements. await nextTick() permet d'attendre que le DOM soit à jour avant de le lire.",
+      "keyPoints": [
+        "Sortie : 0 puis 1",
+        "Mise à jour du DOM asynchrone, mise en tampon jusqu'au next tick",
+        "Batching : un seul update par composant, même après plusieurs mutations",
+        "nextTick() : callback ou Promise à await après la mutation"
+      ],
+      "pitfalls": [
+        "Lire ou mesurer le DOM juste après count.value++ et obtenir l'ancienne valeur"
+      ],
+      "source": {
+        "title": "Global API: General – nextTick()",
+        "url": "https://vuejs.org/api/general.html#nexttick"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.reactivity.deepReactivityReadonly",
+      "moduleId": "reactivity",
+      "kind": "recall",
+      "question": "La réactivité de Vue est-elle profonde par défaut, et que fait readonly() ?",
+      "answer": "Oui : ref() et reactive() rendent leur valeur profondément réactive, donc obj.value.nested.count++ ou arr.push() sont bien détectés, et les objets imbriqués sont eux aussi des Proxy. readonly() renvoie un Proxy en lecture seule, profond lui aussi : toute écriture échoue avec un warning, mais les lectures restent suivies, donc un effet qui lit la copie se relance quand l'original change. Pour limiter à la racine, on a shallowRef, shallowReactive et shallowReadonly.",
+      "details": "const original = reactive({ count: 0 })\nconst copy = readonly(original)\n\nwatchEffect(() => {\n  console.log(copy.count) // suivi normal\n})\n\noriginal.count++ // relance le watcher\ncopy.count++     // echoue avec un warning\n\nreactive() renvoie un Proxy different de l'objet d'origine (proxy !== raw) : seul le proxy est reactif.",
+      "keyPoints": [
+        "Deep reactivity par défaut pour ref() et reactive()",
+        "Objets imbriqués = Proxy aussi ; muter l'objet brut ne déclenche rien",
+        "readonly() : profond, écriture refusée avec warning",
+        "Les lectures d'un readonly restent trackées : l'original qui change relance les effets",
+        "Versions shallow* pour se limiter à la racine"
+      ],
+      "pitfalls": [
+        "Croire que readonly() fige les données : l'original reste modifiable et la copie suit"
+      ],
+      "source": {
+        "title": "Reactivity API: Core – readonly()",
+        "url": "https://vuejs.org/api/reactivity-core.html#readonly"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.computed.computedVsMethod",
+      "moduleId": "computed-watchers",
+      "kind": "compare",
+      "question": "computed ou méthode appelée dans le template : quelle différence ?",
+      "answer": "Le résultat est le même, mais un computed est mis en cache en fonction de ses dépendances réactives : il n'est réévalué que si l'une d'elles change, et plusieurs accès renvoient le résultat déjà calculé. Une méthode, elle, est exécutée à chaque re-render. Le cache compte pour un calcul coûteux, sur un gros tableau par exemple ; si on ne veut pas de cache, on prend une méthode.",
+      "details": "const now = computed(() => Date.now())\n// ne se met jamais a jour : Date.now() n'est pas une dependance reactive",
+      "keyPoints": [
+        "computed : cache basé sur les dépendances réactives",
+        "Réévalué seulement quand une dépendance change",
+        "Méthode : réexécutée à chaque re-render",
+        "Intérêt du cache : calculs coûteux",
+        "Une valeur non réactive (Date.now()) ne fait jamais recalculer le computed"
+      ],
+      "pitfalls": [
+        "computed(() => Date.now()) : il ne se mettra jamais à jour"
+      ],
+      "source": {
+        "title": "Computed Properties – Computed Caching vs. Methods",
+        "url": "https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.computed.writableComputed",
+      "moduleId": "computed-watchers",
+      "kind": "recall",
+      "question": "Peut-on écrire dans un computed ? Et pourquoi son getter doit-il rester sans effet de bord ?",
+      "answer": "Par défaut un computed est en lecture seule, mais on peut lui passer un objet { get, set } : écrire dans .value appelle alors le setter, qui met à jour le state source. Le getter, lui, doit faire un calcul pur : pas de mutation d'un autre state, pas de requête async, pas de manipulation du DOM. Un computed décrit de façon déclarative comment dériver une valeur ; les effets de bord vont dans un watcher, et la valeur retournée se traite comme un snapshot en lecture seule.",
+      "details": "const firstName = ref('John')\nconst lastName = ref('Doe')\n\nconst fullName = computed({\n  get() {\n    return firstName.value + ' ' + lastName.value\n  },\n  set(newValue) {\n    [firstName.value, lastName.value] = newValue.split(' ')\n  }\n})\n\nfullName.value = 'Jane Smith' // appelle le setter\n\nDepuis 3.4, le getter recoit la valeur precedente en argument : computed((previous) => ...).",
+      "keyPoints": [
+        "Getter-only par défaut ; computed({ get, set }) pour l'écriture",
+        "Le setter met à jour le state source, pas le computed",
+        "Getter pur : pas de mutation, pas d'async, pas de DOM",
+        "Effets de bord : dans un watcher",
+        "Valeur retournée = snapshot dérivé, à ne jamais muter"
+      ],
+      "pitfalls": [
+        "Muter la valeur retournée par un computed au lieu de modifier sa source"
+      ],
+      "source": {
+        "title": "Computed Properties – Writable Computed",
+        "url": "https://vuejs.org/guide/essentials/computed.html#writable-computed"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.watch.watchVsWatchEffect",
+      "moduleId": "computed-watchers",
+      "kind": "compare",
+      "question": "watch ou watchEffect : quelle différence ?",
+      "answer": "watch suit uniquement la source qu'on lui donne explicitement et rien de ce qui est lu dans le callback ; il est lazy, donc le callback ne part qu'au premier changement, et il donne accès à l'ancienne et à la nouvelle valeur. watchEffect s'exécute immédiatement et suit automatiquement tout ce qu'il lit pendant son exécution synchrone. watchEffect est plus concis, watch rend les dépendances explicites et donne un contrôle plus précis.",
+      "details": "// equivalents\nwatch(todoId, async () => {\n  const res = await fetch(`/todos/${todoId.value}`)\n  data.value = await res.json()\n}, { immediate: true })\n\nwatchEffect(async () => {\n  const res = await fetch(`/todos/${todoId.value}`)\n  data.value = await res.json()\n})",
+      "keyPoints": [
+        "watch : source explicite, rien d'autre n'est suivi",
+        "watch : lazy par défaut (immediate pour l'exécuter tout de suite)",
+        "watch : accès à newValue et oldValue",
+        "watchEffect : immédiat, dépendances suivies automatiquement",
+        "watchEffect async : seules les lectures avant le premier await sont suivies"
+      ],
+      "pitfalls": [
+        "Dans un watchEffect async, lire une ref après un await : elle n'est pas suivie"
+      ],
+      "source": {
+        "title": "Watchers – watch vs. watchEffect",
+        "url": "https://vuejs.org/guide/essentials/watchers.html#watch-vs-watcheffect"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.watch.watchSources",
+      "moduleId": "computed-watchers",
+      "kind": "code",
+      "question": "Pourquoi ce watcher ne se déclenche-t-il jamais, et quelles sources watch accepte-t-il ?",
+      "code": "const obj = reactive({ count: 0 })\n\nwatch(obj.count, (count) => {\n  console.log(`Count is: ${count}`)\n})\n\nobj.count++",
+      "answer": "obj.count est évalué avant l'appel : on passe le nombre 0 à watch, pas une source réactive, donc rien n'est suivi et Vue émet un warning. Les sources valides sont une ref (computed compris), un objet reactive, un getter ou un tableau de ces sources ; ici il faut écrire watch(() => obj.count, ...). Un objet reactive passé directement est surveillé en deep implicite, alors qu'un getter qui renvoie un objet ne se déclenche que si l'objet est remplacé, sauf avec { deep: true }.",
+      "details": "watch(() => obj.count, (count) => { /* ok */ })\nwatch([x, () => y.value], ([newX, newY]) => {})\n\nwatch(obj, (newValue, oldValue) => {\n  // deep implicite ; newValue === oldValue sur une mutation imbriquee\n})\n\nOptions :\n- immediate: true : callback des la creation (oldValue undefined)\n- deep: true (3.5+ : un nombre = profondeur max)\n- once: true (3.4+) : un seul declenchement puis arret",
+      "keyPoints": [
+        "obj.count passe un nombre : source invalide, rien n'est suivi",
+        "Sources : ref, reactive, getter, tableau de sources",
+        "Propriété d'un reactive : toujours via un getter",
+        "reactive passé directement : deep implicite, newValue === oldValue",
+        "Options : immediate, deep (nombre en 3.5+), once (3.4+)"
+      ],
+      "pitfalls": [
+        "Attendre une oldValue différente sur une mutation imbriquée : c'est le même objet",
+        "deep sur une grosse structure : parcours complet, coûteux"
+      ],
+      "source": {
+        "title": "Watchers – Watch Source Types",
+        "url": "https://vuejs.org/guide/essentials/watchers.html#watch-source-types"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.watch.sideEffectCleanup",
+      "moduleId": "computed-watchers",
+      "kind": "recall",
+      "question": "Un watcher lance une requête à chaque changement d'id : comment éviter qu'une réponse obsolète écrase la bonne ?",
+      "answer": "On enregistre une fonction de nettoyage, appelée juste avant la prochaine exécution du watcher, qui annule la requête en cours, par exemple avec un AbortController. Depuis 3.5, on l'enregistre avec onWatcherCleanup(), à appeler pendant l'exécution synchrone du callback, donc jamais après un await. Sinon, on utilise onCleanup, passé en troisième argument du callback de watch ou en premier argument de watchEffect, qui n'a pas cette contrainte synchrone.",
+      "details": "import { watch, onWatcherCleanup } from 'vue'\n\nwatch(id, (newId) => {\n  const controller = new AbortController()\n\n  fetch(`/api/${newId}`, { signal: controller.signal }).then(() => {\n    // callback logic\n  })\n\n  onWatcherCleanup(() => {\n    controller.abort() // abort stale request\n  })\n})\n\n// alternative\nwatch(id, (newId, oldId, onCleanup) => {\n  onCleanup(() => { /* cleanup */ })\n})",
+      "keyPoints": [
+        "Problème : une requête lente pour un ancien id répond après la nouvelle",
+        "Cleanup appelé juste avant la prochaine exécution du watcher",
+        "onWatcherCleanup() (3.5+) : seulement pendant l'exécution synchrone, pas après un await",
+        "onCleanup en argument : lié au watcher, pas de contrainte synchrone",
+        "Typiquement : AbortController.abort()"
+      ],
+      "pitfalls": [
+        "Appeler onWatcherCleanup() après un await dans un callback async"
+      ],
+      "source": {
+        "title": "Watchers – Side Effect Cleanup",
+        "url": "https://vuejs.org/guide/essentials/watchers.html#side-effect-cleanup"
+      },
+      "since": "3.5",
+      "difficulty": 2
+    },
+    {
+      "id": "vue.watch.flushTiming",
+      "moduleId": "computed-watchers",
+      "kind": "code",
+      "question": "On fait count.value++ trois fois de suite. Que contiennent preSeen, postSeen et syncCalls après le prochain tick ?",
+      "code": "<script setup>\nimport { ref, watch } from 'vue'\n\nconst count = ref(0)\nconst el = ref(null)\nconst preSeen = []\nconst postSeen = []\nlet syncCalls = 0\n\nwatch(count, () => preSeen.push(el.value.textContent))\nwatch(count, () => postSeen.push(el.value.textContent), { flush: 'post' })\nwatch(count, () => syncCalls++, { flush: 'sync' })\n</script>\n\n<template>\n  <p ref=\"el\">{{ count }}</p>\n</template>",
+      "answer": "preSeen vaut ['0'], postSeen vaut ['3'] et syncCalls vaut 3. Par défaut (flush 'pre'), le callback est appelé avant la mise à jour du DOM du composant, donc il lit l'ancien contenu ; avec flush 'post', il passe après le rendu et voit le DOM à jour. Les deux sont batchés en un seul appel, alors qu'un watcher flush 'sync' n'a pas de batching et se déclenche à chaque mutation.",
+      "details": "Alias : watchPostEffect() = watchEffect(..., { flush: 'post' }) et watchSyncEffect() = watchEffect(..., { flush: 'sync' }).\n\nLa doc reserve 'sync' a des cas simples (un booleen), pas aux sources mutees souvent comme les tableaux.",
+      "keyPoints": [
+        "preSeen : ['0'], postSeen : ['3'], syncCalls : 3",
+        "'pre' (défaut) : après les updates du parent, avant le DOM du composant",
+        "'post' : après le rendu, pour lire le DOM à jour (watchPostEffect)",
+        "'sync' : immédiat, sans batching, à chaque mutation (watchSyncEffect)"
+      ],
+      "pitfalls": [
+        "Lire le DOM du composant dans un watcher par défaut et obtenir l'état d'avant",
+        "Mettre flush 'sync' sur un tableau muté souvent : pas de batching, problèmes de perf"
+      ],
+      "source": {
+        "title": "Watchers – Callback Flush Timing",
+        "url": "https://vuejs.org/guide/essentials/watchers.html#callback-flush-timing"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.watch.stoppingWatcher",
+      "moduleId": "computed-watchers",
+      "kind": "recall",
+      "question": "Faut-il arrêter ses watchers à la main ? Dans quel cas un watcher fuit-il ?",
+      "answer": "En général non : un watcher créé de façon synchrone dans setup() ou <script setup> est lié au composant et s'arrête automatiquement au démontage. Mais s'il est créé dans un callback asynchrone, comme un setTimeout, il n'est pas lié au composant et continue de tourner après le démontage : il faut l'arrêter avec le handle retourné par watch ou watchEffect. La doc recommande de préférer la création synchrone et de rendre la logique conditionnelle si on attend des données asynchrones.",
+      "details": "// arrete automatiquement\nwatchEffect(() => {})\n\n// ...pas celui-ci !\nsetTimeout(() => {\n  watchEffect(() => {})\n}, 100)\n\nconst unwatch = watchEffect(() => {})\nunwatch()\n\n// 3.5+ : le handle expose aussi pause(), resume() et stop()\n\n// recommande\nwatchEffect(() => {\n  if (data.value) {\n    // do something when data is loaded\n  }\n})",
+      "keyPoints": [
+        "Watcher créé synchroniquement dans setup : arrêté au démontage",
+        "Créé dans un callback async : non lié au composant, fuite mémoire",
+        "Arrêt manuel : appeler le handle retourné (unwatch())",
+        "3.5+ : handle avec pause(), resume(), stop()",
+        "Préférer la création synchrone + condition dans le watcher"
+      ],
+      "pitfalls": [
+        "Créer un watcher après un await ou dans un setTimeout sans le stopper"
+      ],
+      "source": {
+        "title": "Watchers – Stopping a Watcher",
+        "url": "https://vuejs.org/guide/essentials/watchers.html#stopping-a-watcher"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.components.oneWayDataFlow",
+      "moduleId": "components",
+      "kind": "recall",
+      "question": "Pourquoi un composant enfant ne doit-il pas modifier une prop, et que faire à la place ?",
+      "answer": "Les props suivent un one-way data flow : elles descendent du parent vers l'enfant, et chaque mise à jour du parent les rafraîchit. Elles sont readonly, donc props.foo = 'bar' déclenche un warning et ne fait rien. Si la prop n'est qu'une valeur initiale, on la copie dans un ref local ; si on doit la transformer, on passe par un computed ; et si l'enfant veut changer la donnée, il émet un event pour que le parent fasse la mutation.",
+      "details": "Les deux cas de la page :\n\nconst props = defineProps(['initialCounter', 'size'])\n\n// 1. valeur initiale : counter est ensuite deconnecte de la prop\nconst counter = ref(props.initialCounter)\n\n// 2. transformation : suit les mises a jour de la prop\nconst normalizedSize = computed(() => props.size.trim().toLowerCase())",
+      "keyPoints": [
+        "One-way-down binding : le parent met à jour l'enfant, pas l'inverse",
+        "Props readonly : muter une prop → warning en console, valeur inchangée",
+        "Valeur initiale → ref(props.x), déconnecté des mises à jour suivantes",
+        "Valeur dérivée → computed",
+        "L'enfant veut modifier la donnée → emit, le parent mute"
+      ],
+      "pitfalls": [
+        "Un objet ou tableau passé en prop peut être muté en profondeur par l'enfant sans warning : à éviter, ça rend le flux de données difficile à suivre",
+        "Croire que ref(props.x) reste synchronisé avec la prop"
+      ],
+      "source": {
+        "title": "Props – One-Way Data Flow",
+        "url": "https://vuejs.org/guide/components/props.html#one-way-data-flow"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.components.reactivePropsDestructure",
+      "moduleId": "components",
+      "kind": "code",
+      "question": "En Vue 3.5, ce watcher réagit-il quand la prop foo change ? Comment corriger ?",
+      "code": "<script setup>\nimport { watch } from 'vue'\n\nconst { foo = 'hello' } = defineProps(['foo'])\n\nwatch(foo, (value) => {\n  console.log('foo changed', value)\n})\n</script>",
+      "answer": "Non. Depuis 3.5, la destructuration de defineProps est réactive parce que le compilateur réécrit chaque accès à foo en props.foo dans le même <script setup>. Mais watch(foo) passe la valeur courante, une simple string, pas une source réactive. Il faut passer un getter : watch(() => foo, ...), et de même useComposable(() => foo) pour une fonction externe.",
+      "details": "Ce que produit le compilateur (extrait) :\n\nprops: mergeDefaults(['foo'], { foo: 'hello' }),\nsetup(__props) {\n  watch(() => __props.foo, () => {})\n}\n\nLa valeur par défaut s'écrit directement dans la destructuration, ce qui remplace withDefaults (3.4 et avant). Avec la destructuration, pas besoin d'envelopper les valeurs par défaut objet/tableau dans une fonction.",
+      "keyPoints": [
+        "3.5+ : le compilateur transforme foo en props.foo, donc la destructuration reste réactive",
+        "watch(foo) reçoit une valeur, pas une source réactive : ne marche pas",
+        "Correction : watch(() => foo) ; idem pour passer la prop à un composable",
+        "Valeur par défaut : const { foo = 'hello' } = defineProps<...>(), à la place de withDefaults"
+      ],
+      "pitfalls": [
+        "Avant 3.5, un watchEffect qui lit une prop destructurée ne s'exécute qu'une fois"
+      ],
+      "source": {
+        "title": "Props – Reactive Props Destructure",
+        "url": "https://vuejs.org/guide/components/props.html#reactive-props-destructure"
+      },
+      "since": "3.5",
+      "difficulty": 2
+    },
+    {
+      "id": "vue.components.componentEventsVsDomEvents",
+      "moduleId": "components",
+      "kind": "compare",
+      "question": "Event de composant émis avec defineEmits ou event DOM natif : quelles différences ?",
+      "answer": "Un event de composant est émis explicitement avec emit('submit', payload) et écouté par le parent avec @submit, avec les arguments en plus transmis au listener. Contrairement aux events DOM, il ne fait pas de bubbling : seul le parent direct peut l'écouter, pour des composants éloignés on passe par un event bus ou un state global. On le déclare avec defineEmits, en tableau, en objet avec une fonction de validation, ou en type-based declaration en TypeScript.",
+      "details": "Validation (syntaxe objet) :\n\nconst emit = defineEmits({\n  click: null, // pas de validation\n  submit: ({ email, password }) => {\n    if (email && password) return true\n    console.warn('Invalid submit event payload!')\n    return false\n  }\n})\n\nEn TypeScript :\n\nconst emit = defineEmits<{\n  (e: 'change', id: number): void\n  (e: 'update', value: string): void\n}>()",
+      "keyPoints": [
+        "emit('nom', ...args) côté enfant, @nom côté parent (kebab-case dans le template)",
+        "Pas de bubbling : seul le parent direct entend l'event",
+        "Déclaration via defineEmits : tableau, objet avec validateur (retourne true/false) ou type-based",
+        "Déclarer un nom natif (click) dans emits : le listener n'écoute plus le click natif, seulement celui émis"
+      ],
+      "pitfalls": [
+        "Attendre qu'un grand-parent reçoive l'event d'un petit-enfant comme avec le DOM"
+      ],
+      "source": {
+        "title": "Component Events",
+        "url": "https://vuejs.org/guide/components/events.html"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.components.defineModel",
+      "moduleId": "components",
+      "kind": "recall",
+      "question": "Comment implémenter v-model sur un composant, et qu'y a-t-il sous le capot ?",
+      "answer": "Depuis 3.4, on utilise la macro defineModel() : elle renvoie un ref synchronisé avec le v-model du parent, qu'on peut muter comme n'importe quel ref. Sous le capot, elle déclare une prop modelValue et un event update:modelValue, ce qu'on écrivait à la main avant 3.4. Avec un argument, v-model:title côté parent et defineModel('title') côté enfant, ce qui permet plusieurs v-model sur le même composant.",
+      "details": "Équivalent avant 3.4 :\n\nconst props = defineProps(['modelValue'])\nconst emit = defineEmits(['update:modelValue'])\n// <input :value=\"props.modelValue\" @input=\"emit('update:modelValue', $event.target.value)\" />\n\nCôté parent, <Child v-model=\"foo\" /> se compile en :\n<Child :modelValue=\"foo\" @update:modelValue=\"$event => (foo = $event)\" />\n\nPlusieurs v-model :\n<UserName v-model:first-name=\"first\" v-model:last-name=\"last\" />\nconst firstName = defineModel('firstName')\nconst lastName = defineModel('lastName')",
+      "keyPoints": [
+        "defineModel() (3.4+) renvoie un ref lié au v-model du parent",
+        "Équivaut à la prop modelValue + l'event update:modelValue",
+        "v-model nommé : v-model:title ↔ defineModel('title') ↔ update:title",
+        "Plusieurs v-model possibles sur un même composant",
+        "Options de prop acceptées : defineModel({ required: true }), { default: 0 }"
+      ],
+      "pitfalls": [
+        "Donner un default à defineModel alors que le parent passe undefined : parent et enfant se désynchronisent (le parent reste undefined, l'enfant vaut le default)"
+      ],
+      "source": {
+        "title": "Component v-model",
+        "url": "https://vuejs.org/guide/components/v-model.html"
+      },
+      "since": "3.4",
+      "difficulty": 1
+    },
+    {
+      "id": "vue.components.fallthroughAttributes",
+      "moduleId": "components",
+      "kind": "recall",
+      "question": "Que sont les fallthrough attributes, et comment contrôler où ils s'appliquent ?",
+      "answer": "Ce sont les attributs et listeners v-on passés à un composant sans être déclarés dans ses props ou ses emits, typiquement class, style ou id. Avec un seul root element, Vue les ajoute automatiquement sur ce root, en fusionnant class et style. Pour les appliquer ailleurs, on désactive l'héritage avec defineOptions({ inheritAttrs: false }) et on les rebinde avec v-bind=\"$attrs\" sur l'élément voulu.",
+      "details": "<script setup>\ndefineOptions({ inheritAttrs: false })\n</script>\n\n<template>\n  <div class=\"btn-wrapper\">\n    <button class=\"btn\" v-bind=\"$attrs\">Click Me</button>\n  </div>\n</template>\n\nDans $attrs, foo-bar garde sa casse ($attrs['foo-bar']) et @click devient la fonction $attrs.onClick. En JS : useAttrs() dans <script setup>.",
+      "keyPoints": [
+        "Attributs/listeners non déclarés en props/emits → ajoutés au root element",
+        "class et style fusionnés avec ceux du root ; listeners parent et enfant déclenchés tous les deux",
+        "inheritAttrs: false (via defineOptions, 3.3+) + v-bind=\"$attrs\" pour choisir la cible",
+        "Plusieurs root nodes : pas d'héritage auto, warning si $attrs n'est pas bindé explicitement"
+      ],
+      "pitfalls": [
+        "useAttrs() n'est pas réactif : ne pas le watcher, utiliser onUpdated() pour un effet de bord"
+      ],
+      "source": {
+        "title": "Fallthrough Attributes",
+        "url": "https://vuejs.org/guide/components/attrs.html"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.components.slotsVsScopedSlots",
+      "moduleId": "components",
+      "kind": "compare",
+      "question": "Slot classique ou scoped slot : quelle différence ?",
+      "answer": "Avec un slot classique, le parent injecte du template dans le <slot> de l'enfant, mais ce contenu n'a accès qu'au scope du parent. Avec un scoped slot, l'enfant passe des slot props à son <slot>, et le parent les récupère avec v-slot=\"props\" ou #item=\"{ body }\" : le parent fournit le rendu, l'enfant fournit les données. C'est comme une fonction de rappel que l'enfant appelle avec ses données.",
+      "details": "Enfant :\n<ul>\n  <li v-for=\"item in items\">\n    <slot name=\"item\" v-bind=\"item\" />\n  </li>\n</ul>\n\nParent :\n<FancyList>\n  <template #item=\"{ body, username }\">\n    <p>{{ body }} by {{ username }}</p>\n  </template>\n</FancyList>\n\nAnalogie de la doc :\nChildComponent({ default: (props) => `${props.text} ${props.count}` })",
+      "keyPoints": [
+        "Slot : le parent fournit le template, rendu dans le scope du parent",
+        "Scoped slot : l'enfant passe des slot props, le parent les lit via v-slot / #nom=\"props\"",
+        "Named slots avec <slot name> et #nom ; contenu par défaut entre les balises <slot>",
+        "$slots.header permet un rendu conditionnel selon la présence du slot",
+        "Renderless component : logique dans l'enfant, rendu délégué au parent via scoped slot"
+      ],
+      "pitfalls": [
+        "Utiliser une variable de l'enfant dans le contenu d'un slot sans la passer en slot prop : elle n'est pas dans le scope du parent"
+      ],
+      "source": {
+        "title": "Slots – Scoped Slots",
+        "url": "https://vuejs.org/guide/components/slots.html#scoped-slots"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.components.provideInject",
+      "moduleId": "components",
+      "kind": "recall",
+      "question": "À quoi sert provide / inject, et comment l'utiliser proprement avec une valeur réactive ?",
+      "answer": "provide / inject évite le prop drilling : un ancêtre fournit une valeur avec provide(key, value), et n'importe quel descendant la récupère avec inject(key), quelle que soit la profondeur. Pour rester réactif, on fournit un ref tel quel. Bonne pratique : garder les mutations dans le provider, en fournissant une fonction de mise à jour et éventuellement readonly(ref), et utiliser des Symbol comme clés dans une grosse appli.",
+      "details": "// keys.ts\nimport type { InjectionKey, Ref } from 'vue'\nexport const countKey = Symbol() as InjectionKey<{ count: Readonly<Ref<number>>; inc: () => void }>\n\n// Provider\nconst count = ref(0)\nprovide(countKey, { count: readonly(count), inc: () => count.value++ })\n\n// Descendant\nconst { count, inc } = inject(countKey)!\n\nInjectionKey type la valeur entre provider et consumer ; avec une clé string, inject renvoie unknown et il faut inject<string>('foo'). Le résultat peut être undefined sauf si on donne une valeur par défaut (voir https://vuejs.org/guide/typescript/composition-api.html#typing-provide-inject).",
+      "keyPoints": [
+        "Résout le prop drilling : l'ancêtre provide, n'importe quel descendant inject",
+        "inject résout le provider le plus proche ; app.provide pour le niveau application",
+        "Fournir un ref tel quel garde la réactivité",
+        "Mutations dans le provider : exposer une fonction, protéger avec readonly()",
+        "Clés Symbol (InjectionKey<T> en TypeScript) pour éviter les collisions et typer"
+      ],
+      "pitfalls": [
+        "inject sans valeur par défaut peut renvoyer undefined si aucun ancêtre ne fournit la clé"
+      ],
+      "source": {
+        "title": "Provide / Inject",
+        "url": "https://vuejs.org/guide/components/provide-inject.html"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.components.defineExpose",
+      "moduleId": "components",
+      "kind": "code",
+      "question": "Le parent récupère l'enfant via un template ref. Que vaut child.value.count au montage, et pourquoi ?",
+      "code": "<!-- Child.vue -->\n<script setup>\nimport { ref } from 'vue'\nconst count = ref(1)\nfunction reset() { count.value = 0 }\n</script>\n\n<!-- Parent.vue -->\n<script setup>\nimport { useTemplateRef, onMounted } from 'vue'\nimport Child from './Child.vue'\nconst child = useTemplateRef('child')\nonMounted(() => console.log(child.value.count))\n</script>\n\n<template>\n  <Child ref=\"child\" />\n</template>",
+      "answer": "Il affiche undefined. Un composant en <script setup> est fermé par défaut : l'instance qu'obtient le parent via un template ref ou $parent n'expose aucun binding déclaré dans le script. Il faut que l'enfant appelle defineExpose({ count, reset }) ; le parent voit alors count à 1, les refs étant unwrapped comme sur une instance normale.",
+      "details": "// Child.vue corrigé\nconst count = ref(1)\nfunction reset() { count.value = 0 }\ndefineExpose({ count, reset })\n\nuseTemplateRef existe depuis 3.5 ; avant, on déclarait const child = ref(null) avec le même nom que l'attribut ref. En Options API, l'équivalent est l'option expose: ['publicData', 'publicMethod'].",
+      "keyPoints": [
+        "Sortie : undefined",
+        "<script setup> est fermé par défaut : rien n'est exposé au parent",
+        "defineExpose({ ... }) définit l'API publique, avec les refs unwrapped",
+        "Le template ref n'est rempli qu'après le montage (null avant)",
+        "defineExpose doit être appelé avant tout await"
+      ],
+      "source": {
+        "title": "<script setup> – defineExpose()",
+        "url": "https://vuejs.org/api/sfc-script-setup.html#defineexpose"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.components.asyncComponents",
+      "moduleId": "components",
+      "kind": "recall",
+      "question": "Comment charger un composant à la demande en Vue, et que propose Vue 3.5 pour le SSR ?",
+      "answer": "On enveloppe un import() dynamique dans defineAsyncComponent : le loader n'est appelé qu'au premier rendu du composant, ce qui permet le code splitting, et le wrapper transmet props et slots au composant interne. Une forme objet permet d'ajouter loadingComponent, avec un delay de 200 ms par défaut, errorComponent et timeout. Depuis 3.5, l'option hydrate active la lazy hydration en SSR, avec des stratégies intégrées comme hydrateOnVisible ou hydrateOnIdle.",
+      "details": "const AsyncComp = defineAsyncComponent({\n  loader: () => import('./Foo.vue'),\n  loadingComponent: LoadingComponent,\n  delay: 200,\n  errorComponent: ErrorComponent,\n  timeout: 3000\n})\n\n// Lazy hydration (3.5+, SSR)\nimport { defineAsyncComponent, hydrateOnVisible } from 'vue'\nconst Lazy = defineAsyncComponent({\n  loader: () => import('./Comp.vue'),\n  hydrate: hydrateOnVisible({ rootMargin: '100px' })\n})\n\nAutres stratégies : hydrateOnIdle(), hydrateOnMediaQuery('(max-width:500px)'), hydrateOnInteraction('click'), ou une stratégie custom.",
+      "keyPoints": [
+        "defineAsyncComponent(() => import('./X.vue')) : chargement au premier rendu, code splitting",
+        "Le wrapper transmet props et slots au composant chargé",
+        "Options : loadingComponent, delay (200 ms par défaut), errorComponent, timeout (Infinity par défaut)",
+        "3.5+ : option hydrate pour la lazy hydration en SSR (hydrateOnIdle, hydrateOnVisible, hydrateOnMediaQuery, hydrateOnInteraction)",
+        "Compatible avec <Suspense>"
+      ],
+      "source": {
+        "title": "Async Components",
+        "url": "https://vuejs.org/guide/components/async.html"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.templates.vIfVsVShow",
+      "moduleId": "templates",
+      "kind": "compare",
+      "question": "v-if ou v-show : quelle différence, et quand choisir l'un ou l'autre ?",
+      "answer": "v-if fait du vrai rendu conditionnel : le bloc est créé ou détruit, avec ses listeners et ses composants enfants, et il est lazy, rien n'est rendu tant que la condition n'est pas vraie. v-show rend toujours l'élément et ne bascule que la propriété CSS display. v-if coûte plus cher à chaque bascule, v-show plus cher au rendu initial : v-show pour ce qui change souvent, v-if pour une condition qui change rarement.",
+      "keyPoints": [
+        "v-if : création / destruction du bloc et des composants enfants",
+        "v-if est lazy : rien n'est rendu si la condition est fausse au départ",
+        "v-show : élément toujours dans le DOM, bascule display: none",
+        "Bascules fréquentes → v-show ; condition stable → v-if",
+        "v-show ne marche ni sur <template> ni avec v-else"
+      ],
+      "pitfalls": [
+        "Mettre v-show sur un composant en pensant qu'il ne sera pas monté : il l'est toujours"
+      ],
+      "source": {
+        "title": "Conditional Rendering – v-if vs. v-show",
+        "url": "https://vuejs.org/guide/essentials/conditional.html#v-if-vs-v-show"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.templates.vForWithVIf",
+      "moduleId": "templates",
+      "kind": "code",
+      "question": "Que se passe-t-il avec ce template en Vue 3, et comment l'écrire correctement ?",
+      "code": "<li v-for=\"todo in todos\" v-if=\"!todo.isComplete\">\n  {{ todo.name }}\n</li>",
+      "answer": "Ça plante : en Vue 3, quand v-if et v-for sont sur le même élément, v-if est évalué en premier, donc todo n'existe pas encore dans son scope et Vue lève une erreur. On sort la boucle sur un <template v-for> et on met le v-if sur le <li>, ou mieux, on filtre la liste dans un computed. Et on ajoute un :key primitif et unique, sinon Vue patche les éléments en place sans les réordonner, ce qui casse l'état des composants enfants ou des inputs.",
+      "details": "<template v-for=\"todo in todos\" :key=\"todo.id\">\n  <li v-if=\"!todo.isComplete\">{{ todo.name }}</li>\n</template>\n\n// ou, préféré :\nconst activeTodos = computed(() => todos.value.filter((t) => !t.isComplete))\n// <li v-for=\"todo in activeTodos\" :key=\"todo.id\">",
+      "keyPoints": [
+        "v-if a priorité sur v-for sur le même élément : todo n'est pas défini",
+        "Correction : <template v-for> + v-if dedans, ou computed filtré",
+        "Pour masquer toute la liste : v-if sur le conteneur (ul)",
+        "Sans key : stratégie in-place patch, risquée avec des composants ou des inputs",
+        "key = valeur primitive (string, number) unique, jamais un objet"
+      ],
+      "pitfalls": [
+        "Utiliser un objet comme key : la key doit être une string ou un number"
+      ],
+      "source": {
+        "title": "List Rendering – v-for with v-if",
+        "url": "https://vuejs.org/guide/essentials/list.html#v-for-with-v-if"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.templates.eventModifiers",
+      "moduleId": "templates",
+      "kind": "recall",
+      "question": "Quels modificateurs d'events propose Vue, et pourquoi leur ordre compte-t-il ?",
+      "answer": "Les modificateurs évitent de manipuler l'event dans le handler : .prevent appelle preventDefault, .stop arrête la propagation, .self ne déclenche que si event.target est l'élément lui-même, .once une seule fois, .capture et .passive configurent l'addEventListener. Ils se chaînent et l'ordre compte : @click.prevent.self empêche l'action par défaut sur l'élément et ses enfants, @click.self.prevent seulement sur l'élément lui-même. Il y a aussi des modificateurs de touches comme @keyup.enter ou @keyup.page-down, et .exact pour exiger une combinaison précise.",
+      "details": "<form @submit.prevent=\"onSubmit\"></form>\n<a @click.stop.prevent=\"doThat\"></a>\n<input @keyup.enter=\"submit\" />\n<input @keyup.alt.enter=\"clear\" />\n<button @click.ctrl.exact=\"onCtrlClick\">A</button>\n\nAlias de touches : .enter, .tab, .delete (Delete et Backspace), .esc, .space, .up, .down, .left, .right. Touches système : .ctrl, .alt, .shift, .meta. Souris : .left, .right, .middle.",
+      "keyPoints": [
+        ".prevent, .stop, .self, .once, .capture, .passive",
+        "Chaînables ; l'ordre compte (.prevent.self ≠ .self.prevent)",
+        "Touches : alias (.enter, .esc…) ou nom KeyboardEvent.key en kebab-case",
+        "Touches système (.ctrl, .alt, .shift, .meta) et .exact pour la combinaison exacte"
+      ],
+      "pitfalls": [
+        "Combiner .passive et .prevent : .passive indique déjà au navigateur qu'on n'empêchera pas l'action par défaut, il affichera probablement un warning",
+        "@keyup.ctrl ne se déclenche pas en relâchant Ctrl seul : il faut relâcher une autre touche en le maintenant"
+      ],
+      "source": {
+        "title": "Event Handling – Event Modifiers",
+        "url": "https://vuejs.org/guide/essentials/event-handling.html#event-modifiers"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.templates.formVModel",
+      "moduleId": "templates",
+      "kind": "recall",
+      "question": "Que fait v-model sur un champ de formulaire, et à quoi servent .lazy, .number et .trim ?",
+      "answer": "v-model est du sucre syntaxique pour un binding bidirectionnel : sur un input texte, il équivaut à :value plus un listener @input ; sur checkbox et radio il utilise checked et change, sur select value et change. Il ignore les attributs value, checked ou selected initiaux, la source de vérité est l'état JavaScript. .lazy synchronise sur change au lieu de input, .number convertit avec parseFloat, et .trim retire les espaces autour de la saisie.",
+      "details": "<input v-model=\"text\">\n<!-- équivaut à -->\n<input :value=\"text\" @input=\"event => text = event.target.value\">\n\n<input v-model.lazy=\"msg\" />\n<input v-model.number=\"age\" />\n<input v-model.trim=\"msg\" />\n\n<!-- checkbox avec valeurs custom -->\n<input type=\"checkbox\" v-model=\"toggle\" true-value=\"yes\" false-value=\"no\" />",
+      "keyPoints": [
+        "Texte / textarea : value + event input",
+        "Checkbox / radio : checked + change ; select : value + change",
+        "Ignore value / checked / selected initiaux : la valeur initiale se déclare côté JS",
+        ".lazy → sync sur change ; .number → parseFloat ; .trim → espaces retirés",
+        ".number appliqué automatiquement sur type=\"number\""
+      ],
+      "pitfalls": [
+        "Avec .number, si parseFloat échoue, la valeur reste la string d'origine : ce n'est pas forcément un number"
+      ],
+      "source": {
+        "title": "Form Input Bindings",
+        "url": "https://vuejs.org/guide/essentials/forms.html"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.templates.classAndStyleBindings",
+      "moduleId": "templates",
+      "kind": "recall",
+      "question": "Comment binder dynamiquement class et style en Vue, et que signifie :id sans valeur ?",
+      "answer": ":class accepte un objet, dont chaque clé est appliquée si sa valeur est truthy, ou un tableau, qui peut lui-même contenir des objets, et il cohabite avec un attribut class statique. :style accepte un objet en camelCase (ou en kebab-case entre guillemets) ou un tableau d'objets fusionnés, avec ajout automatique des préfixes vendeur. Depuis 3.4, :id sans valeur est un raccourci pour :id=\"id\", quand l'attribut et la variable ont le même nom.",
+      "details": "<div\n  class=\"static\"\n  :class=\"[{ active: isActive }, errorClass]\"\n  :style=\"{ color: activeColor, fontSize: fontSize + 'px' }\"\n></div>\n\n<!-- same-name shorthand (3.4+), voir https://vuejs.org/guide/essentials/template-syntax.html#same-name-shorthand -->\n<div :id></div>   <!-- = :id=\"id\" -->\n\nSur un composant à un seul root, la class passée par le parent est fusionnée sur le root ; avec plusieurs roots, on choisit l'élément via :class=\"$attrs.class\".",
+      "keyPoints": [
+        ":class objet → classe présente si la valeur est truthy",
+        ":class tableau, éventuellement avec des objets dedans ; coexiste avec class statique",
+        ":style objet (camelCase recommandé) ou tableau d'objets ; préfixes ajoutés automatiquement",
+        ":id sans valeur = :id=\"id\" (same-name shorthand, 3.4+)"
+      ],
+      "source": {
+        "title": "Class and Style Bindings",
+        "url": "https://vuejs.org/guide/essentials/class-and-style.html"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.templates.vHtmlXss",
+      "moduleId": "templates",
+      "kind": "compare",
+      "question": "Interpolation {{ }} ou v-html pour afficher une chaîne : quelle différence, et quel risque ?",
+      "answer": "L'interpolation et les bindings d'attributs sont automatiquement échappés : une balise <script> dans la chaîne s'affiche comme du texte. v-html, lui, injecte la chaîne comme du vrai HTML, sans échappement ni data binding, ce qui ouvre la porte au XSS. Règle de la doc : v-html uniquement sur du contenu de confiance, jamais sur du contenu fourni par un utilisateur, car du HTML utilisateur n'est jamais sûr à 100 % sauf dans une iframe sandboxée.",
+      "details": "<h1>{{ userProvidedString }}</h1>   <!-- échappé -->\n<div v-html=\"userProvidedHtml\"></div>   <!-- injecté tel quel -->\n\nAutres vecteurs listés par la page : URL injection via :href (javascript:, à assainir côté backend avant stockage), style injection, et binding de JavaScript utilisateur dans onclick, onfocus... Règle n°1 : ne jamais utiliser du contenu non fiable comme template de composant.",
+      "keyPoints": [
+        "{{ }} et :attr sont échappés automatiquement",
+        "v-html injecte du HTML brut : risque XSS",
+        "v-html seulement sur du contenu de confiance, jamais du contenu utilisateur",
+        "v-html ne compile pas de template (pas de data binding dedans) : préférer des composants",
+        "Autres vecteurs : :href avec javascript:, styles, handlers fournis par l'utilisateur"
+      ],
+      "pitfalls": [
+        "Croire que Vue protège aussi :href : une URL javascript: passe, il faut l'assainir"
+      ],
+      "source": {
+        "title": "Security – HTML Injection",
+        "url": "https://vuejs.org/guide/best-practices/security.html#html-injection"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.templates.arrayChangeDetection",
+      "moduleId": "templates",
+      "kind": "code",
+      "question": "Après un appel à keepDone(), la liste affichée ne change pas. Pourquoi, et comment corriger ?",
+      "code": "<script setup>\nimport { ref } from 'vue'\n\nconst items = ref([\n  { id: 1, label: 'a', done: true },\n  { id: 2, label: 'b', done: false }\n])\n\nfunction add() {\n  items.value.push({ id: 3, label: 'c', done: true })\n}\n\nfunction keepDone() {\n  items.value.filter((item) => item.done)\n}\n</script>\n\n<template>\n  <li v-for=\"item in items\" :key=\"item.id\">{{ item.label }}</li>\n</template>",
+      "answer": "filter() est une méthode non mutante : elle renvoie un nouveau tableau et ne touche pas l'original, donc il n'y a rien à détecter. Vue réagit aux méthodes de mutation comme push, pop, shift, unshift, splice, sort et reverse, c'est pourquoi add() fonctionne. Pour filter, concat ou slice, il faut remplacer le tableau : items.value = items.value.filter(...), et Vue réutilise au maximum les éléments DOM existants, sans re-rendre toute la liste.",
+      "details": "function keepDone() {\n  items.value = items.value.filter((item) => item.done)\n}\n\nPour afficher une version filtrée ou triée sans toucher la source, préférer un computed. Attention : sort() et reverse() mutent le tableau, donc dans un computed on copie d'abord : return [...numbers.value].reverse().",
+      "keyPoints": [
+        "filter / concat / slice renvoient un nouveau tableau : il faut le réassigner",
+        "Méthodes de mutation détectées : push, pop, shift, unshift, splice, sort, reverse",
+        "Remplacer le tableau est efficace : Vue réutilise les éléments DOM",
+        "Vue filtrée ou triée → computed, avec copie avant sort() / reverse()"
+      ],
+      "pitfalls": [
+        "Appeler sort() ou reverse() directement dans un computed : ça mute l'état source"
+      ],
+      "source": {
+        "title": "List Rendering – Array Change Detection",
+        "url": "https://vuejs.org/guide/essentials/list.html#array-change-detection"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.compositionApi.compositionVsOptions",
+      "moduleId": "composition-api",
+      "kind": "compare",
+      "question": "Composition API ou Options API : quelle différence, et pourquoi la doc recommande-t-elle la Composition API pour une vraie application ?",
+      "answer": "L'Options API range la logique par type d'option (data, methods, computed, mounted) autour d'une instance this, alors que la Composition API déclare l'état et la logique avec des fonctions importées (ref, computed, onMounted) dans le scope de setup. La doc met en avant trois gains : on regroupe le code par préoccupation logique au lieu de l'éparpiller entre options, on réutilise la logique proprement via des composables, et l'inférence TypeScript marche naturellement puisque ce sont des variables et des fonctions. Les deux styles reposent sur le même système, l'Options API étant même implémentée au-dessus de la Composition API, et elle n'est pas dépréciée.",
+      "details": "Recommandation de la doc pour la production :\n- Options API : sans build tool, ou usage peu complexe (progressive enhancement).\n- Composition API + SFC : pour construire une application complète.\n\nAutre gain cité : avec <script setup>, le template est compilé dans le même scope que le code, sans proxy d'instance, ce qui donne un bundle plus petit et mieux minifiable.\n\nLes deux peuvent cohabiter via l'option setup() dans un composant Options API, mais la doc ne le recommande que pour intégrer du nouveau code dans une base Options API existante.",
+      "keyPoints": [
+        "Options API : options groupées par type, état exposé sur this",
+        "Composition API : fonctions importées, code groupé par préoccupation logique",
+        "Réutilisation via composables (remplace les mixins), meilleure inférence TS",
+        "Même système sous le capot : l'Options API est construite sur la Composition API",
+        "Options API non dépréciée, toujours valable pour les cas simples"
+      ],
+      "pitfalls": [
+        "Présenter la Composition API comme de la programmation fonctionnelle : la doc précise qu'elle repose sur la réactivité mutable et fine de Vue"
+      ],
+      "source": {
+        "title": "Composition API FAQ",
+        "url": "https://vuejs.org/guide/extras/composition-api-faq.html#why-composition-api"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.compositionApi.scriptSetup",
+      "moduleId": "composition-api",
+      "kind": "recall",
+      "question": "En quoi est compilé <script setup>, et pourquoi est-ce la forme recommandée pour écrire un SFC ?",
+      "answer": "Le contenu de <script setup> est compilé comme le corps de la fonction setup() du composant : il s'exécute donc à chaque création d'instance, contrairement à un <script> classique qui ne s'exécute qu'une fois à l'import. Toutes les déclarations de haut niveau, imports compris, sont directement utilisables dans le template. La doc cite moins de boilerplate, props et emits déclarables en pur TypeScript, de meilleures performances runtime car le template est compilé dans le même scope sans proxy intermédiaire, et une meilleure inférence côté IDE.",
+      "details": "<script setup>\nimport { ref } from 'vue'\n\nconst props = defineProps<{ foo: string; bar?: number }>()\nconst emit = defineEmits<{ change: [id: number] }>()\nconst count = ref(0)\n\n// rien n'est visible depuis un ref parent sans defineExpose\ndefineExpose({ count })\n</script>\n\ndefineProps, defineEmits et defineExpose sont des compiler macros : pas d'import. Un top-level await compile en async setup() et doit être utilisé avec <Suspense>.",
+      "keyPoints": [
+        "Compilé comme le contenu de setup(), exécuté à chaque instance",
+        "Bindings de haut niveau et imports exposés directement au template",
+        "defineProps / defineEmits : compiler macros, déclarables en TypeScript",
+        "Composant fermé par défaut : defineExpose pour exposer au parent",
+        "Plus performant : template inliné dans le même scope, pas de proxy"
+      ],
+      "pitfalls": [
+        "Les options passées à defineProps / defineEmits sont hoistées au niveau module : elles ne peuvent pas référencer des variables locales de setup"
+      ],
+      "source": {
+        "title": "<script setup>",
+        "url": "https://vuejs.org/api/sfc-script-setup.html"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.compositionApi.lifecycleOrder",
+      "moduleId": "composition-api",
+      "kind": "code",
+      "question": "Qu'affiche la console au montage de Parent, après un clic sur le bouton, puis au démontage de Parent ?",
+      "code": "<!-- Child.vue -->\n<script setup>\nimport { onMounted, onUpdated, onUnmounted } from 'vue'\ndefineProps(['n'])\nonMounted(() => console.log('child mounted'))\nonUpdated(() => console.log('child updated'))\nonUnmounted(() => console.log('child unmounted'))\n</script>\n<template><p>{{ n }}</p></template>\n\n<!-- Parent.vue -->\n<script setup>\nimport { ref, onMounted, onUpdated, onUnmounted } from 'vue'\nimport Child from './Child.vue'\nconst n = ref(0)\nonMounted(() => console.log('parent mounted'))\nonUpdated(() => console.log('parent updated'))\nonUnmounted(() => console.log('parent unmounted'))\n</script>\n<template>\n  <Child :n=\"n\" />\n  <button @click=\"n++\">{{ n }}</button>\n</template>",
+      "answer": "On obtient child mounted, parent mounted, puis child updated, parent updated, puis child unmounted, parent unmounted : l'enfant passe toujours en premier. Un composant n'est considéré monté qu'une fois tous ses enfants synchrones montés, le updated du parent est appelé après celui de ses enfants, et un composant n'est démonté qu'après tous ses enfants. Ces hooks doivent être enregistrés de façon synchrone pendant setup, sinon Vue ne sait pas à quelle instance les rattacher.",
+      "details": "Ce qui ne marche pas (warning « no active component instance », le hook n'est jamais appelé) :\n\nsetTimeout(() => {\n  onMounted(() => {\n    // this won't work.\n  })\n}, 100)\n\nL'appel n'a pas besoin d'être lexicalement dans setup, mais doit être sur sa pile d'appel synchrone (c'est ce qui permet d'appeler onMounted depuis un composable). onMounted, onUpdated et onUnmounted ne sont pas appelés en SSR.",
+      "keyPoints": [
+        "Sortie : child mounted, parent mounted / child updated, parent updated / child unmounted, parent unmounted",
+        "Monté = enfants synchrones montés + DOM propre inséré",
+        "updated du parent appelé après celui des enfants",
+        "Hooks à enregistrer de façon synchrone pendant setup (pas dans un setTimeout ni après un await)"
+      ],
+      "pitfalls": [
+        "Muter l'état dans onUpdated : risque de boucle de mise à jour infinie",
+        "onMounted ne garantit pas que les composants async ou dans un <Suspense> soient montés"
+      ],
+      "source": {
+        "title": "Composition API: Lifecycle Hooks",
+        "url": "https://vuejs.org/api/composition-api-lifecycle.html"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.compositionApi.composableConventions",
+      "moduleId": "composition-api",
+      "kind": "recall",
+      "question": "Qu'est-ce qu'un composable, et quelles conventions la doc recommande-t-elle pour l'écrire ?",
+      "answer": "Un composable est une fonction qui utilise la Composition API pour encapsuler et réutiliser de la logique stateful. Par convention on le nomme en camelCase avec le préfixe use, il retourne un objet simple contenant des refs plutôt qu'un reactive pour rester destructurable sans perdre la réactivité, et il accepte en entrée des refs ou des getters qu'il normalise avec toValue(). Il doit être appelé de façon synchrone dans <script setup> ou setup(), pour que Vue puisse y rattacher ses lifecycle hooks et watchers.",
+      "details": "Pourquoi des refs en retour :\n\nfunction useCounter() {\n  const state = reactive({ count: 0 })\n  setTimeout(() => state.count++, 1000)\n  return state\n}\nconst { count } = useCounter() // count = 0 pour toujours, lien réactif perdu\n\nAvec return { count } où count est un ref, la destructuration garde la réactivité. Pour un accès objet : const mouse = reactive(useMouse()) déballe les refs.\n\nEntrée réactive (toValue ajouté en 3.3) :\n\nexport function useFetch(url) {\n  const data = ref(null)\n  watchEffect(() => {\n    fetch(toValue(url)).then((r) => r.json()).then((j) => (data.value = j))\n  })\n  return { data }\n}\n\ntoValue doit être appelé DANS le watchEffect pour que la dépendance soit trackée. Effets DOM dans onMounted, nettoyage dans onUnmounted.",
+      "keyPoints": [
+        "Fonction qui encapsule de la logique stateful avec la Composition API",
+        "Nom en camelCase préfixé par use (useMouse, useFetch)",
+        "Retourner un objet simple de refs, pas un reactive (destructuration réactive)",
+        "Accepter refs / getters et les normaliser avec toValue(), à l'intérieur du watcher",
+        "Appel synchrone dans setup ; seul <script setup> autorise un appel après await"
+      ],
+      "pitfalls": [
+        "Appeler toValue(url) hors du watchEffect : la dépendance n'est pas trackée, pas de re-fetch",
+        "Oublier de nettoyer les listeners dans onUnmounted (fuite mémoire)"
+      ],
+      "source": {
+        "title": "Composables",
+        "url": "https://vuejs.org/guide/reusability/composables.html#conventions-and-best-practices"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.compositionApi.composablesVsMixins",
+      "moduleId": "composition-api",
+      "kind": "compare",
+      "question": "Composables ou mixins : quels problèmes des mixins les composables résolvent-ils ?",
+      "answer": "La doc cite trois défauts des mixins : on ne sait plus quel mixin a injecté quelle propriété d'instance, plusieurs mixins peuvent enregistrer la même clé et entrer en collision, et des mixins qui doivent interagir dépendent de clés partagées implicites. Avec les composables, la destructuration rend la source de chaque valeur explicite, on peut renommer en cas de conflit, et on passe le retour d'un composable en argument d'un autre comme une fonction normale. Les mixins ne sont donc plus recommandés en Vue 3 et ne sont gardés que pour la migration.",
+      "details": "const { x, y } = useMouse()\nconst { data, error } = useFetch(() => `/api/pos?x=${x.value}`)\n\n// collision ? on renomme\nconst { data: user } = useUser()\n\nLa doc compare aussi aux renderless components : les composables évitent le coût d'une instance de composant en plus. Composable pour la logique pure, composant pour réutiliser logique + rendu.",
+      "keyPoints": [
+        "Mixins : source des propriétés floue",
+        "Mixins : collisions de noms entre mixins",
+        "Mixins : communication implicite via des clés partagées",
+        "Composables : destructuration explicite, renommage, passage d'arguments",
+        "Mixins plus recommandés en Vue 3 (gardés pour la migration)"
+      ],
+      "source": {
+        "title": "Composables",
+        "url": "https://vuejs.org/guide/reusability/composables.html#vs-mixins"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.compositionApi.useTemplateRef",
+      "moduleId": "composition-api",
+      "kind": "code",
+      "question": "Que vaut input.value au moment du console.log de setup, puis dans onMounted ? Et comment faisait-on avant Vue 3.5 ?",
+      "code": "<script setup>\nimport { useTemplateRef, onMounted } from 'vue'\n\nconst input = useTemplateRef('my-input')\nconsole.log(input.value)\n\nonMounted(() => {\n  console.log(input.value)\n  input.value.focus()\n})\n</script>\n\n<template>\n  <input ref=\"my-input\" />\n</template>",
+      "answer": "Dans setup, input.value vaut null car le DOM n'existe pas encore ; dans onMounted, il contient l'élément <input>. useTemplateRef(key) retourne un shallow ref en lecture seule synchronisé avec l'élément ou le composant qui porte l'attribut ref correspondant, et TypeScript infère son type. Avant 3.5, on déclarait un ref(null) portant exactement le même nom que l'attribut ref du template.",
+      "details": "Avant 3.5 (toujours valide) :\n\nconst input = ref(null)\n// <input ref=\"input\" />\n\nAvec useTemplateRef, la clé est une chaîne runtime : elle peut différer du nom de la variable et supporter des refs dynamiques. Dans un v-for, la ref contient un tableau dont l'ordre n'est pas garanti. Sur un composant en <script setup>, on n'accède qu'à ce qu'il expose avec defineExpose.",
+      "keyPoints": [
+        "null avant le montage, l'élément après (onMounted)",
+        "useTemplateRef('key') : shallow ref readonly lié à ref=\"key\", type inféré",
+        "Avant 3.5 : ref(null) avec le même nom que l'attribut ref",
+        "Dans un watchEffect, tester la nullité avant d'utiliser la ref"
+      ],
+      "pitfalls": [
+        "Lire la ref dans setup ou avant mount et s'étonner du null",
+        "Supposer que le tableau de refs d'un v-for suit l'ordre de la liste source"
+      ],
+      "source": {
+        "title": "Template Refs",
+        "url": "https://vuejs.org/guide/essentials/template-refs.html"
+      },
+      "since": "3.5",
+      "difficulty": 2
+    },
+    {
+      "id": "vue.compositionApi.useId",
+      "moduleId": "composition-api",
+      "kind": "recall",
+      "question": "À quoi sert useId(), et quelles garanties offre-t-il ?",
+      "answer": "useId() génère un identifiant unique à l'échelle de l'application, pensé pour les éléments de formulaire et les attributs d'accessibilité comme label for ou aria-*. Chaque appel donne un ID différent, y compris entre plusieurs instances du même composant. Surtout, les IDs sont stables entre le rendu serveur et le rendu client, donc pas de hydration mismatch en SSR.",
+      "details": "<script setup>\nimport { useId } from 'vue'\nconst id = useId()\n</script>\n\n<template>\n  <label :for=\"id\">Name:</label>\n  <input :id=\"id\" type=\"text\" />\n</template>\n\nPlusieurs applications Vue sur la même page : donner un préfixe à chacune via app.config.idPrefix pour éviter les collisions.",
+      "keyPoints": [
+        "ID unique par application, pour formulaires et accessibilité",
+        "Différent à chaque appel et pour chaque instance du composant",
+        "Stable entre serveur et client : pas d'hydration mismatch",
+        "Plusieurs apps sur la page : app.config.idPrefix"
+      ],
+      "pitfalls": [
+        "Appeler useId() dans un computed() : la doc l'interdit (conflits d'instance), le déclarer à l'extérieur"
+      ],
+      "source": {
+        "title": "Composition API: Helpers",
+        "url": "https://vuejs.org/api/composition-api-helpers.html#useid"
+      },
+      "since": "3.5",
+      "difficulty": 2
+    },
+    {
+      "id": "vue.rendering.compilerInformedVdom",
+      "moduleId": "rendering",
+      "kind": "recall",
+      "question": "Vue utilise un virtual DOM : qu'entend la doc par « Compiler-Informed Virtual DOM », et quelles optimisations le compilateur apporte-t-il ?",
+      "answer": "Le template est compilé en render function qui retourne un arbre de vnodes ; au montage le renderer crée le vrai DOM, puis à chaque changement il compare l'ancien et le nouvel arbre (patch). Un virtual DOM purement runtime, comme celui de React, doit parcourir et comparer tout l'arbre faute de pouvoir rien supposer ; Vue contrôle compilateur et runtime, donc le compilateur analyse le template et laisse des indices au runtime. Les trois principaux : le cache des parties statiques, les patch flags qui disent quel type de mise à jour un nœud peut nécessiter, et le tree flattening qui ne parcourt que les nœuds dynamiques d'un block.",
+      "details": "<div>\n  <div>foo</div>          <!-- statique : vnode mis en cache et réutilisé -->\n  <div :class=\"{ active }\"></div>  <!-- patch flag CLASS : seule la classe est comparée -->\n  <div>{{ dynamic }}</div> <!-- patch flag TEXT -->\n</div>\n\nAssez d'éléments statiques consécutifs sont condensés en un seul « static vnode » monté via innerHTML. Un block (racine, v-if, v-for) garde un tableau aplati de ses descendants dynamiques : au re-render, seul ce tableau est parcouru. Patch flags et tree flattening accélèrent aussi l'hydratation SSR.",
+      "keyPoints": [
+        "Pipeline : compile (template -> render function), mount, patch",
+        "VDOM runtime pur : diff complet de l'arbre à chaque rendu",
+        "Cache static : vnodes statiques créés une fois, diff sauté",
+        "Patch flags : type de mise à jour encodé à la compilation (CLASS, TEXT...)",
+        "Tree flattening : seuls les nœuds dynamiques d'un block sont parcourus"
+      ],
+      "source": {
+        "title": "Rendering Mechanism",
+        "url": "https://vuejs.org/guide/extras/rendering-mechanism.html#compiler-informed-virtual-dom"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.rendering.keepAlive",
+      "moduleId": "rendering",
+      "kind": "code",
+      "question": "On clique deux fois sur le compteur de A, on bascule sur B puis on revient sur A. Qu'affiche la console et que vaut le compteur ?",
+      "code": "<!-- A.vue -->\n<script setup>\nimport { ref, onMounted, onActivated, onDeactivated } from 'vue'\nconst count = ref(0)\nonMounted(() => console.log('A mounted'))\nonActivated(() => console.log('A activated'))\nonDeactivated(() => console.log('A deactivated'))\n</script>\n<template><button @click=\"count++\">{{ count }}</button></template>\n\n<!-- Parent.vue -->\n<template>\n  <KeepAlive>\n    <component :is=\"current\" />\n  </KeepAlive>\n</template>",
+      "answer": "La console affiche A mounted, A activated, puis A deactivated au passage sur B, puis A activated au retour, et le compteur vaut toujours 2. Sans <KeepAlive>, quitter A le démonterait et perdrait son état ; avec, l'instance est mise en cache et passe en état deactivated au lieu d'être démontée. onActivated est appelé au montage initial puis à chaque réinsertion depuis le cache, onDeactivated à chaque mise en cache et au démontage.",
+      "details": "Filtrer ce qui est caché :\n\n<KeepAlive :include=\"['A', 'B']\" :max=\"10\">\n  <component :is=\"current\" />\n</KeepAlive>\n\ninclude / exclude acceptent une chaîne séparée par des virgules, une RegExp ou un tableau, comparés à l'option name du composant (inférée du nom de fichier pour <script setup> depuis 3.2.34). max limite le nombre d'instances en cache, comportement LRU. onActivated / onDeactivated s'appliquent aussi aux descendants de l'arbre caché.",
+      "keyPoints": [
+        "Sortie : A mounted, A activated, A deactivated, A activated ; compteur à 2",
+        "KeepAlive cache les instances : état conservé entre les bascules",
+        "onActivated : montage initial + chaque retour du cache",
+        "onDeactivated : chaque mise en cache + démontage",
+        "include / exclude matchent l'option name ; max = cache LRU"
+      ],
+      "pitfalls": [
+        "Croire que onMounted est rappelé au retour depuis le cache : seul onActivated l'est"
+      ],
+      "source": {
+        "title": "KeepAlive",
+        "url": "https://vuejs.org/guide/built-ins/keep-alive.html#lifecycle-of-cached-instance"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.rendering.teleport",
+      "moduleId": "rendering",
+      "kind": "code",
+      "question": "Où se retrouve le DOM de <Modal> dans la page, et l'événement close émis par Modal remonte-t-il encore jusqu'à ce composant ?",
+      "code": "<script setup>\nimport { ref } from 'vue'\nimport Modal from './Modal.vue'\nconst open = ref(true)\n</script>\n\n<template>\n  <div class=\"card\">\n    <Teleport to=\"body\">\n      <Modal v-if=\"open\" @close=\"open = false\" />\n    </Teleport>\n  </div>\n</template>",
+      "answer": "Le DOM de la modale est rendu directement dans <body>, hors de div.card, ce qui évite les problèmes de position: fixed et de z-index liés aux parents. Seule la structure du DOM change : logiquement, Modal reste un enfant de ce composant, donc props, événements comme close, et provide/inject fonctionnent normalement, et les Devtools la montrent sous son parent. Ici, close passe open à false et la modale disparaît du body.",
+      "details": "to accepte un sélecteur CSS ou un nœud DOM, et la cible doit déjà exister dans le DOM quand le Teleport est monté.\n\n<Teleport to=\"#modals\" :disabled=\"isMobile\">...</Teleport>\n\ndisabled désactive le déplacement (rendu sur place). Plusieurs Teleport vers la même cible ajoutent leur contenu dans l'ordre. Depuis 3.5, l'attribut defer permet de cibler un élément rendu plus tard par Vue dans le même tick.",
+      "keyPoints": [
+        "Le DOM est déplacé vers la cible to (ici body)",
+        "La hiérarchie logique ne change pas : props, events, provide/inject intacts",
+        "Cas d'usage type : modales, pour échapper au CSS des parents",
+        "La cible doit exister au montage (ou defer depuis 3.5)",
+        "disabled pour rendre sur place selon le contexte"
+      ],
+      "pitfalls": [
+        "Cibler un élément rendu par Vue après le Teleport sans defer : la cible n'existe pas encore"
+      ],
+      "source": {
+        "title": "Teleport",
+        "url": "https://vuejs.org/guide/built-ins/teleport.html"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.rendering.transitionClasses",
+      "moduleId": "rendering",
+      "kind": "recall",
+      "question": "Quand <Transition> s'applique-t-il, et quelles classes CSS pose-t-il pendant l'entrée et la sortie ?",
+      "answer": "<Transition> anime un élément ou composant unique qui entre ou sort du DOM via v-if, v-show, un composant dynamique ou un changement de key. Il pose six classes : v-enter-from, v-enter-active et v-enter-to pour l'entrée, v-leave-from, v-leave-active et v-leave-to pour la sortie. Les classes *-active couvrent toute la phase et portent la transition CSS, *-from est l'état de départ retiré une frame après, *-to l'état d'arrivée ; avec name=\"fade\", le préfixe v- devient fade-.",
+      "details": ".fade-enter-active,\n.fade-leave-active {\n  transition: opacity 0.5s ease;\n}\n.fade-enter-from,\n.fade-leave-to {\n  opacity: 0;\n}\n\n<Transition name=\"fade\" mode=\"out-in\">\n  <component :is=\"view\" />\n</Transition>\n\nappear anime aussi le rendu initial ; mode=\"out-in\" fait sortir l'ancien avant d'insérer le nouveau. Pour une liste v-for : <TransitionGroup tag=\"ul\">, pas de mode, key obligatoire sur chaque item, et classe v-move pour animer les déplacements.",
+      "keyPoints": [
+        "Déclencheurs : v-if, v-show, composant dynamique, changement de key",
+        "Un seul enfant (composant à racine unique)",
+        "Six classes : v-enter-from/active/to, v-leave-from/active/to",
+        "name=\"fade\" -> fade-enter-active, etc.",
+        "Listes : TransitionGroup (keys requises, v-move, pas de mode)"
+      ],
+      "pitfalls": [
+        "Mettre plusieurs enfants dans <Transition> au lieu d'utiliser <TransitionGroup>"
+      ],
+      "source": {
+        "title": "Transition",
+        "url": "https://vuejs.org/guide/built-ins/transition.html"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.rendering.suspense",
+      "moduleId": "rendering",
+      "kind": "recall",
+      "question": "À quoi sert <Suspense>, sur quelles dépendances async attend-il, et quel est son statut ?",
+      "answer": "<Suspense> orchestre les dépendances async d'un arbre de composants et affiche le slot fallback tant qu'elles ne sont pas résolues, puis le slot default. Il attend les composants avec un async setup(), ceux qui utilisent un top-level await dans <script setup>, et les async components, suspensible par défaut. C'est une fonctionnalité expérimentale : la doc prévient qu'elle n'est pas garantie de devenir stable et que l'API peut changer.",
+      "details": "<Suspense>\n  <Dashboard />\n  <template #fallback>\n    Loading...\n  </template>\n</Suspense>\n\nAprès la résolution initiale, Suspense ne repasse en pending que si le nœud racine du slot default est remplacé. Événements : pending, resolve, fallback. Pas de gestion d'erreur intégrée : onErrorCaptured dans un parent. Ordre d'imbrication recommandé : RouterView > Transition > KeepAlive > Suspense.",
+      "keyPoints": [
+        "Affiche #fallback tant que les dépendances async de #default sont en attente",
+        "Attend : async setup(), top-level await de <script setup>, async components",
+        "Expérimental : API susceptible de changer",
+        "Erreurs : via onErrorCaptured dans un parent",
+        "Repasse en pending seulement si la racine du slot default change"
+      ],
+      "pitfalls": [
+        "Utiliser un top-level await dans <script setup> sans <Suspense> au-dessus"
+      ],
+      "source": {
+        "title": "Suspense",
+        "url": "https://vuejs.org/guide/built-ins/suspense.html"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.rendering.renderFunctionVsTemplate",
+      "moduleId": "rendering",
+      "kind": "compare",
+      "question": "Render function (ou JSX) ou template : quand utiliser l'un ou l'autre en Vue ?",
+      "answer": "Les templates sont recommandés par défaut : plus proches du HTML, donc faciles à réutiliser, à styler et à rendre accessibles, et surtout statiquement analysables, ce qui permet au compilateur d'appliquer ses optimisations du virtual DOM. Les render functions, écrites avec h() ou en JSX, donnent toute la puissance de JavaScript pour manipuler des vnodes. En pratique, la doc les réserve aux composants réutilisables avec une logique de rendu très dynamique.",
+      "details": "Avec la Composition API, setup retourne directement la render function :\n\nimport { ref, h } from 'vue'\nexport default {\n  props: ['msg'],\n  setup(props) {\n    const count = ref(1)\n    return () => h('div', props.msg + count.value)\n  }\n}\n\nJSX Vue (voir https://vuejs.org/guide/extras/render-function.html) : class et for au lieu de className / htmlFor, et depuis 3.4 il faut \"jsxImportSource\": \"vue\" dans tsconfig car le namespace JSX global n'est plus enregistré implicitement.",
+      "keyPoints": [
+        "Template par défaut : proche du HTML, statiquement analysable",
+        "Analyse statique = optimisations du compilateur (cache static, patch flags...)",
+        "Render function / JSX : toute la puissance de JS sur les vnodes",
+        "Réservé aux composants réutilisables très dynamiques"
+      ],
+      "pitfalls": [
+        "Écrire du JSX Vue comme du JSX React (className, htmlFor)"
+      ],
+      "source": {
+        "title": "Rendering Mechanism",
+        "url": "https://vuejs.org/guide/extras/rendering-mechanism.html#templates-vs-render-functions"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.pinia.whyPinia",
+      "moduleId": "ecosystem",
+      "kind": "recall",
+      "question": "Pourquoi utiliser Pinia plutôt qu'un simple état global export const state = reactive({}), et qu'apporte-t-il par rapport à Vuex ?",
+      "answer": "Pinia est la store library de Vue : elle partage un état entre composants et pages. Un reactive() exporté fonctionne dans une SPA, mais la doc précise qu'il expose à des failles de sécurité en SSR (cross-request state pollution), et même en SPA Pinia apporte devtools (timeline, time travel), plugins, HMR, utilitaires de test et une vraie inférence TypeScript. Face à Vuex 3/4, Pinia est devenu la recommandation officielle : plus de mutations, plus de modules imbriqués ni de namespaced modules, des stores plats qu'on importe et qu'on appelle.",
+      "details": "Exemple de base de la page :\n\nexport const useCounterStore = defineStore('counter', {\n  state: () => ({ count: 0 }),\n  actions: {\n    increment() {\n      this.count++\n    },\n  },\n})\n\nPinia est né comme une exploration de ce que pourrait être Vuex 5 ; l'équipe a constaté qu'il implémentait déjà l'essentiel et en a fait la nouvelle recommandation. Côté organisation, on peut toujours utiliser un store dans un autre (cross composition), et même avoir des dépendances circulaires entre stores.",
+      "keyPoints": [
+        "reactive() exporté : OK en SPA, mais faille de sécurité en SSR (cross-request state pollution)",
+        "Apports : devtools (timeline, time travel), plugins, HMR, utilitaires de test, support SSR",
+        "TypeScript : tout est typé et inféré, pas de wrappers custom",
+        "Vs Vuex 3/4 : plus de mutations, plus de modules imbriqués ni de namespaces, plus de magic strings",
+        "Pinia = recommandation officielle à la place d'un futur Vuex 5"
+      ],
+      "pitfalls": [
+        "Parler de mutations à commit avec Pinia : elles n'existent plus, on modifie le state directement ou via des actions"
+      ],
+      "source": {
+        "title": "Pinia – Introduction",
+        "url": "https://pinia.vuejs.org/introduction.html#Why-should-I-use-Pinia-"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.pinia.optionVsSetupStores",
+      "moduleId": "ecosystem",
+      "kind": "compare",
+      "question": "Option store ou setup store dans Pinia : quelle différence ?",
+      "answer": "Un option store passe à defineStore un objet calqué sur l'Options API : state (comme data), getters (comme computed) et actions (comme methods). Un setup store passe une fonction façon Composition API : les ref() deviennent le state, les computed() les getters et les fonctions les actions, et on peut y utiliser des composables, des watchers ou inject(). La doc dit de choisir selon son confort : l'option store est plus simple, le setup store plus flexible et puissant.",
+      "details": "// Option store\nexport const useCounterStore = defineStore('counter', {\n  state: () => ({ count: 0, name: 'Eduardo' }),\n  getters: {\n    doubleCount: (state) => state.count * 2,\n  },\n  actions: {\n    increment() {\n      this.count++\n    },\n  },\n})\n\n// Setup store\nexport const useCounterStore = defineStore('counter', () => {\n  const count = ref(0)\n  const doubleCount = computed(() => count.value * 2)\n  function increment() {\n    count.value++\n  }\n  return { count, doubleCount, increment }\n})\n\nConvention de nommage : use...Store, et un id unique en premier argument de defineStore.",
+      "keyPoints": [
+        "Option store : { state: () => ({...}), getters, actions }, comme l'Options API",
+        "Setup store : fonction qui retourne ref (state), computed (getters) et fonctions (actions)",
+        "Setup store : composables, watchers et inject() utilisables",
+        "Setup store : il faut retourner toutes les propriétés de state",
+        "Choix : option store plus simple, setup store plus flexible"
+      ],
+      "pitfalls": [
+        "Dans un setup store, ne pas retourner une propriété de state (ou la rendre readonly) casse le SSR, les devtools et les plugins"
+      ],
+      "source": {
+        "title": "Pinia – Defining a Store",
+        "url": "https://pinia.vuejs.org/core-concepts/#Setup-Stores"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.pinia.storeToRefs",
+      "moduleId": "ecosystem",
+      "kind": "code",
+      "question": "Après un clic sur le bouton, qu'est-ce qui se met à jour à l'écran, et pourquoi ?",
+      "code": "<script setup>\nimport { storeToRefs } from 'pinia'\nimport { useCounterStore } from '@/stores/counter'\n\nconst store = useCounterStore()\nconst { count } = store\nconst { doubleCount } = storeToRefs(store)\nconst { increment } = store\n</script>\n\n<template>\n  <p>{{ count }} / {{ doubleCount }}</p>\n  <button @click=\"increment\">+</button>\n</template>",
+      "answer": "Seul doubleCount se met à jour : count reste figé à 0, alors que le state du store vaut bien 1. Le store est un objet wrapped avec reactive, donc, comme les props, on ne peut pas le destructurer sans perdre la réactivité. storeToRefs() crée une ref pour chaque propriété réactive (state et getters), ce qui préserve la réactivité ; les actions, elles, se destructurent directement car elles sont liées au store.",
+      "details": "Version correcte :\n\nconst store = useCounterStore()\nconst { count, doubleCount } = storeToRefs(store)\nconst { increment } = store\n\nSans destructuration, store.count dans le template reste réactif, et on n'écrit pas .value sur les getters.",
+      "keyPoints": [
+        "count destructuré directement : valeur figée, plus réactive",
+        "Le store est un objet reactive : pas de destructuration directe, comme les props",
+        "storeToRefs() : une ref par propriété de state et par getter",
+        "Les actions se destructurent directement (liées au store)"
+      ],
+      "pitfalls": [
+        "Croire que l'action n'a rien fait : le state a changé, c'est la copie destructurée qui n'est plus réactive"
+      ],
+      "source": {
+        "title": "Pinia – Defining a Store",
+        "url": "https://pinia.vuejs.org/core-concepts/#Destructuring-from-a-Store"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.pinia.gettersActionsPatchReset",
+      "moduleId": "ecosystem",
+      "kind": "recall",
+      "question": "Dans Pinia, à quoi servent getters et actions, comment utiliser un autre store, et que font $patch et $reset ?",
+      "answer": "Les getters sont l'équivalent de computed : ils reçoivent le state et sont mis en cache ; les actions sont l'équivalent de methods, peuvent être async et accèdent au store via this. Pour utiliser un autre store, on appelle simplement son useXxxStore() à l'intérieur de l'action ou du getter. $patch applique plusieurs changements d'un coup, avec un objet ou avec une fonction (plus adaptée pour push ou splice dans un tableau). $reset() remet le state initial en rappelant state(), mais seulement dans un option store : dans un setup store, il faut écrire son propre $reset.",
+      "details": "// Action qui utilise un autre store\nactions: {\n  async fetchUserPreferences() {\n    const auth = useAuthStore()\n    if (auth.isAuthenticated) {\n      this.preferences = await fetchPreferences()\n    } else {\n      throw new Error('User must be authenticated')\n    }\n  },\n}\n\n// $patch\nstore.$patch({ count: store.count + 1, name: 'DIO' })\nstore.$patch((state) => {\n  state.items.push({ name: 'shoes', quantity: 1 })\n  state.hasChanged = true\n})\n\n// $reset dans un setup store\nexport const useCounterStore = defineStore('counter', () => {\n  const count = ref(0)\n  function $reset() {\n    count.value = 0\n  }\n  return { count, $reset }\n})\n\nVoir aussi les pages Getters et Actions de la doc Pinia.",
+      "keyPoints": [
+        "Getters = computed (cache) ; actions = methods (sync ou async, via this, pas d'arrow function dans un option store)",
+        "Autre store : appeler useAuthStore() dans l'action ou le getter",
+        "$patch(objet) ou $patch((state) => ...) pour modifier des collections",
+        "$reset() : option store seulement ; setup store → définir son propre $reset"
+      ],
+      "pitfalls": [
+        "Un getter qui retourne une fonction pour accepter un argument n'est plus mis en cache",
+        "Appeler $reset() sur un setup store qui ne le définit pas : erreur"
+      ],
+      "source": {
+        "title": "Pinia – State",
+        "url": "https://pinia.vuejs.org/core-concepts/state.html#Resetting-the-state"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.router.paramsComponentReuse",
+      "moduleId": "ecosystem",
+      "kind": "code",
+      "question": "On navigue de /users/1 vers /users/2 : pourquoi l'utilisateur affiché ne change-t-il pas, et comment corriger ?",
+      "code": "// routes: [{ path: '/users/:id', component: User }]\n\n// User.vue\n<script setup>\nimport { ref, onMounted } from 'vue'\nimport { useRoute } from 'vue-router'\n\nconst route = useRoute()\nconst user = ref(null)\n\nonMounted(async () => {\n  user.value = await fetchUser(route.params.id)\n})\n</script>",
+      "answer": "Quand seul le param change, Vue Router réutilise la même instance du composant User au lieu de la détruire et la recréer, donc onMounted n'est pas rappelé et le fetch ne repart pas. route.params.id vaut bien 2, c'est le code de lifecycle qui ne repasse pas. Pour réagir, on fait un watch sur () => route.params.id, ou on utilise le guard onBeforeRouteUpdate, qui reçoit la nouvelle route dans to.",
+      "details": "<script setup>\nimport { watch } from 'vue'\nimport { useRoute, onBeforeRouteUpdate } from 'vue-router'\n\nconst route = useRoute()\n\n// Option 1\nwatch(\n  () => route.params.id,\n  (newId, oldId) => {\n    // react to route changes...\n  }\n)\n\n// Option 2\nonBeforeRouteUpdate(async (to, from) => {\n  userData.value = await fetchUser(to.params.id)\n})\n</script>\n\nCatch-all pour une page 404 : { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound }.",
+      "keyPoints": [
+        ":id = dynamic segment, lu via route.params.id (useRoute) ou $route.params.id",
+        "Même composant pour /users/1 et /users/2 → instance réutilisée",
+        "Certains lifecycle hooks (onMounted...) ne sont pas rappelés",
+        "Solutions : watch(() => route.params.id, ...) ou onBeforeRouteUpdate"
+      ],
+      "pitfalls": [
+        "Croire que route.params n'est pas à jour : il l'est, seul le code de montage ne repasse pas"
+      ],
+      "source": {
+        "title": "Vue Router – Dynamic Route Matching with Params",
+        "url": "https://router.vuejs.org/guide/essentials/dynamic-matching.html#Reacting-to-Params-Changes"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.router.navigationGuards",
+      "moduleId": "ecosystem",
+      "kind": "recall",
+      "question": "Quels types de navigation guards propose Vue Router, et que peut retourner un guard ?",
+      "answer": "Il y a des guards globaux (router.beforeEach, router.beforeResolve, et router.afterEach qui ne peut pas affecter la navigation), des guards par route (beforeEnter dans la config de la route) et des guards dans le composant (beforeRouteEnter, beforeRouteUpdate, beforeRouteLeave, ou onBeforeRouteUpdate et onBeforeRouteLeave en Composition API). Un guard retourne false pour annuler, une route location pour rediriger comme avec router.push(), ou rien / true pour valider ; lever une Error annule aussi et déclenche router.onError(). Le troisième argument next est encore supporté, mais il doit alors être appelé exactement une fois par passage.",
+      "details": "router.beforeEach(async (to, from) => {\n  if (\n    // make sure the user is authenticated\n    !isAuthenticated &&\n    // avoid an infinite redirect\n    to.name !== 'Login'\n  ) {\n    // redirect the user to the login page\n    return { name: 'Login' }\n  }\n})\n\n// Per-route\nconst routes = [\n  {\n    path: '/users/:id',\n    component: UserDetails,\n    beforeEnter: (to, from) => {\n      // reject the navigation\n      return false\n    },\n  },\n]\n\nOrdre de résolution : beforeRouteLeave → beforeEach → beforeRouteUpdate → beforeEnter → composants async résolus → beforeRouteEnter → beforeResolve → navigation confirmée → afterEach → mise à jour du DOM.",
+      "keyPoints": [
+        "Globaux : beforeEach (dans l'ordre de création), beforeResolve, afterEach (ne bloque rien)",
+        "beforeEnter : seulement à l'entrée dans la route, pas quand params, query ou hash changent",
+        "In-component : beforeRouteEnter (pas de this), beforeRouteUpdate, beforeRouteLeave ; onBeforeRouteUpdate / onBeforeRouteLeave",
+        "Retour : false = annule, route location = redirige, undefined / true = valide, Error = annule + onError"
+      ],
+      "pitfalls": [
+        "Rediriger vers Login sans tester to.name !== 'Login' : redirection infinie",
+        "Avec next, l'appeler zéro ou plusieurs fois dans un même passage"
+      ],
+      "source": {
+        "title": "Vue Router – Navigation Guards",
+        "url": "https://router.vuejs.org/guide/advanced/navigation-guards.html"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.router.lazyLoadingRoutes",
+      "moduleId": "ecosystem",
+      "kind": "recall",
+      "question": "Comment faire du lazy loading de routes avec Vue Router, et quelle erreur éviter ?",
+      "answer": "On remplace l'import statique du composant par une fonction qui fait un import dynamique : component: () => import('./views/UserDetails.vue'). Le bundler crée un chunk séparé, que Vue Router ne télécharge qu'à la première visite de la route, puis il réutilise la version en cache. Il ne faut pas utiliser un async component (defineAsyncComponent) comme route component : la route reçoit une simple fonction, un async component restant possible à l'intérieur.",
+      "details": "const UserDetails = () => import('./views/UserDetails.vue')\n\nconst router = createRouter({\n  // ...\n  routes: [\n    { path: '/users/:id', component: UserDetails },\n    // or use it directly in the route definition\n    { path: '/users/:id', component: () => import('./views/UserDetails.vue') },\n  ],\n})\n\nRegrouper plusieurs routes dans un même chunk avec Vite :\n\nbuild: {\n  rollupOptions: {\n    output: {\n      manualChunks: {\n        'group-user': ['./src/UserDetails', './src/UserDashboard'],\n      },\n    },\n  },\n}\n\nAvec webpack : import(/* webpackChunkName: \"group-user\" */ './UserDetails.vue').",
+      "keyPoints": [
+        "component: () => import('./views/X.vue')",
+        "Chunk séparé, chargé à la première visite puis mis en cache",
+        "La doc conseille des imports dynamiques pour toutes les routes",
+        "Pas de defineAsyncComponent comme route component",
+        "Regrouper des routes : manualChunks (Vite) ou webpackChunkName"
+      ],
+      "pitfalls": [
+        "Confondre lazy loading de routes et async components : ce sont deux mécanismes distincts"
+      ],
+      "source": {
+        "title": "Vue Router – Lazy Loading Routes",
+        "url": "https://router.vuejs.org/guide/advanced/lazy-loading.html"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.router.historyModes",
+      "moduleId": "ecosystem",
+      "kind": "compare",
+      "question": "createWebHistory ou createWebHashHistory : quelle différence, et quelle configuration serveur faut-il ?",
+      "answer": "createWebHistory, le mode HTML5 recommandé, donne des URL normales comme /user/id ; mais comme c'est une SPA, un accès direct à cette URL renvoie un 404 si le serveur n'a pas de fallback qui sert index.html pour toute URL ne correspondant à aucun fichier. createWebHashHistory ajoute un # avant le chemin ; cette partie n'est jamais envoyée au serveur, donc aucune config n'est nécessaire, mais la doc signale un mauvais impact SEO. Avec le fallback, le serveur ne renvoie plus de 404 : il faut une route catch-all côté Vue pour afficher la page 404.",
+      "details": "import { createRouter, createWebHistory } from 'vue-router'\n\nconst router = createRouter({\n  history: createWebHistory(),\n  routes: [\n    // ...\n    { path: '/:pathMatch(.*)', component: NotFoundComponent },\n  ],\n})\n\n# nginx\nlocation / {\n  try_files $uri $uri/ /index.html;\n}\n\ncreateMemoryHistory() : pas d'interaction avec le navigateur ni de navigation initiale automatique, adapté à Node et au SSR.\n\nVersion : Vue Router 5 est la dernière majeure ; selon le guide de migration, c'est une release de transition qui intègre le file-based routing (unplugin-vue-router) dans le package, sans breaking change pour une app Vue Router 4 qui n'utilisait pas unplugin-vue-router.",
+      "keyPoints": [
+        "createWebHistory : URL propres, mode recommandé, config serveur obligatoire",
+        "Fallback serveur vers index.html (nginx : try_files $uri $uri/ /index.html)",
+        "createWebHashHistory : # dans l'URL, pas de config serveur, mauvais pour le SEO",
+        "Route catch-all côté Vue pour la page 404",
+        "createMemoryHistory : Node / SSR"
+      ],
+      "pitfalls": [
+        "Déployer en createWebHistory sans fallback : 404 au rafraîchissement ou sur un lien direct"
+      ],
+      "source": {
+        "title": "Vue Router – Different History modes",
+        "url": "https://router.vuejs.org/guide/essentials/history-mode.html"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.typescript.propsDefaults",
+      "moduleId": "quality",
+      "kind": "compare",
+      "question": "Props typées avec defineProps<Props>() : valeurs par défaut via withDefaults ou via la destructuration ?",
+      "answer": "En type-based declaration, on écrit defineProps<{ foo: string; bar?: number }>() et le compilateur génère la déclaration runtime équivalente. Depuis Vue 3.5, la Reactive Props Destructure permet de déclarer les défauts avec la syntaxe native de JavaScript, const { msg = 'hello' } = defineProps<Props>(), et les variables restent réactives car le compilateur les réécrit en props.msg. withDefaults(defineProps<Props>(), {...}) est l'approche de 3.4 et avant : elle type-check les défauts et retire le ? du type retourné, mais les objets et tableaux doivent y être fournis via une fonction.",
+      "details": "interface Props {\n  msg?: string\n  labels?: string[]\n}\n\n// 3.5+\nconst { msg = 'hello', labels = ['one', 'two'] } = defineProps<Props>()\n\n// 3.4 et avant\nconst props = withDefaults(defineProps<Props>(), {\n  msg: 'hello',\n  labels: () => ['one', 'two']\n})\n\nDepuis 3.3, le type passé à defineProps peut être importé, mais la conversion type → runtime reste basée sur l'AST : un conditional type est accepté pour une prop, pas pour l'objet props entier.",
+      "keyPoints": [
+        "defineProps<T>() : type-based, déclaration runtime générée par le compilateur",
+        "Impossible de combiner type-based et runtime declaration",
+        "3.5+ : défauts via destructuration native, qui reste réactive (compilée en props.x)",
+        "withDefaults (3.4 et avant) : défauts objets / tableaux wrappés dans une fonction"
+      ],
+      "pitfalls": [
+        "Avec withDefaults, labels: ['one', 'two'] sans fonction : valeur mutable partagée entre instances"
+      ],
+      "source": {
+        "title": "TypeScript with Composition API – Typing Component Props",
+        "url": "https://vuejs.org/guide/typescript/composition-api.html#typing-component-props"
+      },
+      "since": "3.5",
+      "difficulty": 1
+    },
+    {
+      "id": "vue.typescript.typedEmitsAndModel",
+      "moduleId": "quality",
+      "kind": "recall",
+      "question": "Comment typer les events d'un composant avec defineEmits, et un v-model avec defineModel ?",
+      "answer": "Depuis Vue 3.3, la syntaxe courte est defineEmits<{ change: [id: number]; update: [value: string] }>() : chaque clé est un event et son payload est un named tuple. L'ancienne syntaxe par call signatures, (e: 'change', id: number): void, reste valide. Pour un v-model, defineModel<string>() (3.4+) déclare la prop modelValue et l'event update:modelValue ; il renvoie un Ref<string | undefined>, et l'option { required: true } retire le undefined.",
+      "details": "const emit = defineEmits<{\n  (e: 'change', id: number): void\n  (e: 'update', value: string): void\n}>()\n\n// 3.3+: alternative, more succinct syntax\nconst emit = defineEmits<{\n  change: [id: number] // named tuple syntax\n  update: [value: string]\n}>()\n\nconst modelValue = defineModel<string>()\n//    ^? Ref<string | undefined>\nconst modelValue = defineModel<string>({ required: true })\n//    ^? Ref<string>\nconst [modelValue, modifiers] = defineModel<string, 'trim' | 'uppercase'>()",
+      "keyPoints": [
+        "defineEmits<{ change: [id: number] }>() : syntaxe courte 3.3+",
+        "Syntaxe longue : call signatures (e: 'change', id: number): void",
+        "emit avec un mauvais payload ou un event inconnu → erreur de type",
+        "defineModel<string>() → Ref<string | undefined> ; { required: true } → Ref<string>"
+      ],
+      "pitfalls": [
+        "Combiner runtime et type declaration dans le même defineEmits : erreur de compilation"
+      ],
+      "source": {
+        "title": "<script setup> – Type-only props/emit declarations",
+        "url": "https://vuejs.org/api/sfc-script-setup.html#type-only-props-emit-declarations"
+      },
+      "since": "3.3",
+      "difficulty": 1
+    },
+    {
+      "id": "vue.typescript.genericComponents",
+      "moduleId": "quality",
+      "kind": "recall",
+      "question": "Comment écrire un generic component avec <script setup> ?",
+      "answer": "On ajoute l'attribut generic sur la balise, <script setup lang=\"ts\" generic=\"T\">, puis on utilise T dans defineProps, defineEmits ou defineModel, par exemple items: T[] et selected: T. La valeur de generic fonctionne exactement comme la liste de paramètres entre <...> en TypeScript : plusieurs paramètres, contraintes extends, types par défaut, types importés. T est inféré depuis ce que le parent passe, et le commentaire @vue-generic permet de le forcer quand l'inférence ne suffit pas.",
+      "details": "<script\n  setup\n  lang=\"ts\"\n  generic=\"T extends string | number, U extends Item\"\n>\nimport type { Item } from './types'\ndefineProps<{\n  id: T\n  list: U[]\n}>()\n</script>\n\n<!-- forcer le type -->\n<!-- @vue-generic {import('@/api').Actor} -->\n<ApiSelect v-model=\"peopleIds\" endpoint=\"/api/actors\" id-prop=\"actorId\" />\n\nPour typer une ref vers un generic component, InstanceType ne marche pas : utiliser ComponentExposed de vue-component-type-helpers.",
+      "keyPoints": [
+        "generic=\"T\" sur <script setup lang=\"ts\">",
+        "Même syntaxe que <...> en TS : extends, plusieurs paramètres, défauts, imports",
+        "T inféré depuis les props, ou forcé avec <!-- @vue-generic {...} -->",
+        "Ref vers un generic component : ComponentExposed, pas InstanceType"
+      ],
+      "source": {
+        "title": "<script setup> – Generics",
+        "url": "https://vuejs.org/api/sfc-script-setup.html#generics"
+      },
+      "since": "3.3",
+      "difficulty": 2
+    },
+    {
+      "id": "vue.typescript.injectionKey",
+      "moduleId": "quality",
+      "kind": "recall",
+      "question": "Comment typer provide / inject en TypeScript ?",
+      "answer": "On crée une clé avec InjectionKey, une interface generic qui étend Symbol : const key = Symbol() as InjectionKey<string>, placée de préférence dans un fichier séparé importé par le provider et le consumer. provide(key, ...) refuse alors une valeur d'un autre type, et inject(key) renvoie string | undefined, car rien ne garantit qu'un provider fournira la valeur au runtime. Avec une clé string, le type est unknown sauf si on le passe en generic, inject<string>('foo') ; une valeur par défaut retire le undefined, et sinon on peut forcer avec as si on est sûr que la valeur est fournie.",
+      "details": "import { provide, inject } from 'vue'\nimport type { InjectionKey } from 'vue'\n\nconst key = Symbol() as InjectionKey<string>\n\nprovide(key, 'foo') // providing non-string value will result in error\n\nconst foo = inject(key) // type of foo: string | undefined\n\nconst bar = inject<string>('foo') // type: string | undefined\nconst baz = inject<string>('foo', 'bar') // type: string\nconst qux = inject('foo') as string",
+      "keyPoints": [
+        "InjectionKey<T> étend Symbol et synchronise le type entre provide et inject",
+        "Clé dans un fichier séparé, importée des deux côtés",
+        "inject(key) → T | undefined (aucune garantie de provider)",
+        "Clé string : unknown sauf inject<T>('foo') ; valeur par défaut → T ; sinon cast as"
+      ],
+      "pitfalls": [
+        "Le cast as ne vérifie rien au runtime : à réserver aux cas où la valeur est toujours fournie"
+      ],
+      "source": {
+        "title": "TypeScript with Composition API – Typing Provide / Inject",
+        "url": "https://vuejs.org/guide/typescript/composition-api.html#typing-provide-inject"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.testing.componentTesting",
+      "moduleId": "quality",
+      "kind": "recall",
+      "question": "Comment tester un composant Vue, et qu'est-ce qu'il ne faut pas tester ?",
+      "answer": "La doc recommande Vitest avec Vue Test Utils : on monte le composant avec mount() en lui passant des props, on simule l'utilisateur avec trigger(), puis on vérifie le rendu ou les events émis via emitted(). On teste l'interface publique, c'est-à-dire ce que le composant affiche et émet en réponse aux props, aux slots et aux interactions. On évite d'asserter l'état privé ou les méthodes internes, qui rendent les tests fragiles, et de se reposer uniquement sur des snapshots.",
+      "details": "Exemple de la page Testing :\n\nconst valueSelector = '[data-testid=stepper-value]'\nconst buttonSelector = '[data-testid=increment]'\n\nconst wrapper = mount(Stepper, {\n  props: {\n    max: 1\n  }\n})\n\nexpect(wrapper.find(valueSelector).text()).toContain('0')\n\nawait wrapper.find(buttonSelector).trigger('click')\n\nexpect(wrapper.find(valueSelector).text()).toContain('1')\n\nEvents (guide Vue Test Utils, Testing Emitted Events) : emitted() renvoie un objet event → liste des appels, chacun avec ses arguments.\n\nwrapper.find('button').trigger('click')\nwrapper.find('button').trigger('click')\nexpect(wrapper.emitted('increment')).toEqual([[1], [2]])\n\nVue Test Utils 2 cible Vue 3 (VTU 1 cible Vue 2).",
+      "keyPoints": [
+        "Vitest + @vue/test-utils (VTU 2 pour Vue 3)",
+        "mount(Comp, { props }), find(), await trigger('click'), text()",
+        "emitted('increment') → un tableau d'arguments par appel, ex. [[1], [2]]",
+        "Tester rendu et events émis, pas l'état interne ni les méthodes privées",
+        "Pas uniquement des snapshots ; logique complexe → l'extraire et la unit-tester"
+      ],
+      "pitfalls": [
+        "Oublier await sur trigger() puis asserter le DOM avant sa mise à jour"
+      ],
+      "source": {
+        "title": "Testing – Component Testing",
+        "url": "https://vuejs.org/guide/scaling-up/testing.html#component-testing"
+      },
+      "difficulty": 1
+    },
+    {
+      "id": "vue.testing.composables",
+      "moduleId": "quality",
+      "kind": "compare",
+      "question": "Tester un composable : l'appeler directement ou passer par un composant hôte, comment choisir ?",
+      "answer": "Si le composable n'utilise que des API de réactivité, comme ref et computed, on l'appelle directement dans le test et on vérifie l'état et les méthodes qu'il retourne. S'il dépend de lifecycle hooks ou de provide/inject, il a besoin d'une instance de composant : on l'appelle dans le setup d'une app hôte créée avec createApp et montée sur un div, via un helper withSetup. On récupère son résultat, on peut fournir des valeurs avec app.provide(), et on termine par app.unmount().",
+      "details": "// direct\ntest('useCounter', () => {\n  const { count, increment } = useCounter()\n  expect(count.value).toBe(0)\n  increment()\n  expect(count.value).toBe(1)\n})\n\n// helper de la doc\nexport function withSetup(composable) {\n  let result\n  const app = createApp({\n    setup() {\n      result = composable()\n      return () => {}\n    }\n  })\n  app.mount(document.createElement('div'))\n  return [result, app]\n}",
+      "keyPoints": [
+        "Réactivité seule (ref, computed) : appel direct dans le test",
+        "Lifecycle hooks ou provide/inject : composant hôte (createApp + mount)",
+        "Helper withSetup qui renvoie [result, app]",
+        "app.unmount() en fin de test"
+      ],
+      "pitfalls": [
+        "Appeler app.provide() après app.mount() : inject() a déjà tourné dans le setup et ne voit pas la valeur (vérifié) ; fournir avant le mount"
+      ],
+      "source": {
+        "title": "Testing – Testing Composables",
+        "url": "https://vuejs.org/guide/scaling-up/testing.html#testing-composables"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.performance.propsStability",
+      "moduleId": "quality",
+      "kind": "code",
+      "question": "Liste de 100 ListItem : quand activeId change, combien d'items se mettent à jour, et comment l'éviter ?",
+      "code": "<ListItem\n  v-for=\"item in list\"\n  :key=\"item.id\"\n  :id=\"item.id\"\n  :active-id=\"activeId\" />",
+      "answer": "Les 100 ListItem se mettent à jour, car tous reçoivent la prop active-id, qui a changé. Un composant enfant ne se met à jour que si au moins une de ses props a changé : la doc conseille donc des props stables, ici en calculant :active=\"item.id === activeId\" dans le parent, et seuls les deux items dont l'état actif bascule se mettent à jour. Pour les grosses listes, on peut ensuite sauter des mises à jour avec v-memo, virtualiser la liste, et utiliser shallowRef pour de grosses structures immuables.",
+      "details": "<ListItem\n  v-for=\"item in list\"\n  :key=\"item.id\"\n  :id=\"item.id\"\n  :active=\"item.id === activeId\" />\n\nshallowRef pour une grosse liste immuable :\n\nconst shallowArray = shallowRef([\n  /* big list */\n])\n\n// does not trigger updates\nshallowArray.value.push(newObject)\n// triggers an update\nshallowArray.value = [...shallowArray.value, newObject]\n\nv-once : sous-arbre rendu une fois puis jamais mis à jour. v-memo : saute conditionnellement la mise à jour de gros sous-arbres ou de listes v-for. Virtualisation : vue-virtual-scroller, vue-virtual-scroll-grid, vueuc/VVirtualList.",
+      "keyPoints": [
+        "Un enfant n'est mis à jour que si une de ses props change",
+        ":active-id → 100 mises à jour ; :active=\"item.id === activeId\" → 2",
+        "v-once : jamais mis à jour ; v-memo : mise à jour sautée sous condition",
+        "Très grandes listes : virtualisation",
+        "Grosse donnée immuable : shallowRef, on remplace .value au lieu de muter"
+      ],
+      "pitfalls": [
+        "Avec shallowRef, push() ou modifier un élément ne déclenche rien : il faut réassigner .value"
+      ],
+      "source": {
+        "title": "Performance – Props Stability",
+        "url": "https://vuejs.org/guide/best-practices/performance.html#props-stability"
+      },
+      "difficulty": 2
+    },
+    {
+      "id": "vue.performance.computedStability",
+      "moduleId": "quality",
+      "kind": "code",
+      "question": "Depuis Vue 3.4, combien de fois ce watchEffect logge-t-il, et pourquoi ?",
+      "code": "const count = ref(0)\nconst isEven = computed(() => count.value % 2 === 0)\n\nwatchEffect(() => console.log(isEven.value))\n\ncount.value = 2\ncount.value = 4",
+      "answer": "Une seule fois : true, à l'exécution initiale du watchEffect. Depuis 3.4, un computed ne déclenche ses effets que si sa valeur a réellement changé par rapport à la précédente ; ici isEven reste true, donc rien n'est relancé. En revanche, un computed qui crée un nouvel objet à chaque calcul est toujours considéré comme changé : la doc propose de comparer avec oldValue, reçu en argument, et de retourner l'ancien objet si rien n'a bougé.",
+      "details": "const computedObj = computed((oldValue) => {\n  const newValue = {\n    isEven: count.value % 2 === 0\n  }\n  if (oldValue && oldValue.isEven === newValue.isEven) {\n    return oldValue\n  }\n  return newValue\n})\n\nToujours faire le calcul complet avant de comparer, pour collecter les mêmes dépendances à chaque exécution.\n\nCôté chargement, la même page recommande le code splitting : import() dynamique, defineAsyncComponent(() => import('./Foo.vue')) pour un arbre de composants, et le lazy loading des routes avec Vue Router.",
+      "keyPoints": [
+        "Un seul log : true",
+        "3.4+ : effets relancés seulement si la valeur du computed change",
+        "Computed qui crée un nouvel objet → toujours « changé »",
+        "Solution : computed((oldValue) => ...) et retourner oldValue si identique"
+      ],
+      "pitfalls": [
+        "Retourner oldValue avant d'avoir fait le calcul complet : les dépendances ne sont plus collectées"
+      ],
+      "source": {
+        "title": "Performance – Computed Stability",
+        "url": "https://vuejs.org/guide/best-practices/performance.html#computed-stability"
+      },
+      "since": "3.4",
+      "difficulty": 2
+    }
+  ]
+}
